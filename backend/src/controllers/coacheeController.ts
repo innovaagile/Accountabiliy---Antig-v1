@@ -1,24 +1,86 @@
 import { Request, Response } from 'express';
 import prisma from '../config/db';
 
-export const getCoachees = async (req: Request, res: Response): Promise<void> => {
+export const obtenerCoachees = async (req: Request, res: Response): Promise<void> => {
   try {
+    const { search, empresa, cargo, servicio, estado } = req.query;
+
+    let whereClause: any = { role: 'COACHEE' };
+
+    if (search) {
+      whereClause.OR = [
+        { nombre: { contains: String(search), mode: 'insensitive' } },
+        { apellido: { contains: String(search), mode: 'insensitive' } },
+        { email: { contains: String(search), mode: 'insensitive' } },
+      ];
+    }
+    
+    if (empresa) whereClause.empresa = String(empresa);
+    if (cargo) whereClause.cargo = String(cargo);
+    
+    // Asumimos lógica de negocio que valida con los ciclos
+    if (servicio) {
+      whereClause.ciclos = { some: { producto: String(servicio) } };
+    }
+    
+    if (estado !== undefined) {
+      whereClause.activo = estado === 'true' || estado === 'activo';
+    }
+
     const coachees = await prisma.user.findMany({
-      where: { role: 'COACHEE' },
-      select: { id: true, nombre: true, apellido: true, email: true, pais: true, telefono: true, activo: true }
+      where: whereClause,
+      include: {
+        ciclos: true,
+        contracts: true
+      }
     });
-    const formatted = coachees.map(c => ({
+
+    const formatted = coachees.map((c: any) => ({
       id: c.id,
       nombre: `${c.nombre} ${c.apellido}`,
       email: c.email,
       pais: c.pais || 'No especificado',
       telefono: c.telefono || 'No especificado',
-      plan: 'SPRINT DIGITAL 4S', 
+      empresa: c.empresa,
+      cargo: c.cargo,
+      // Servicio usando su ciclo activo, de lo contrario fallback
+      plan: c.ciclos?.find((ci:any) => ci.estado === 'ACTIVO')?.producto || 'No asignado', 
       frecuencia: 'CADA COMPROMISO', 
       estado: c.activo ? 'Activo' : 'Inactivo',
+      activo: c.activo,
     }));
+    
     res.json(formatted);
   } catch (error) {
+    console.error('Error al obtener coachees:', error);
+    res.status(500).json({ message: 'Error interno del servidor' });
+  }
+};
+
+export const obtenerCoacheePorId = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const coachee = await prisma.user.findFirst({
+      where: { 
+        id, 
+        role: 'COACHEE' 
+      },
+      include: {
+        ciclos: {
+          include: { tareas: true }
+        },
+        contracts: true
+      }
+    });
+    
+    if (!coachee) {
+      res.status(404).json({ message: 'Coachee no encontrado' });
+      return;
+    }
+    
+    res.json(coachee);
+  } catch (error) {
+    console.error('Error al obtener coachee por id:', error);
     res.status(500).json({ message: 'Error interno del servidor' });
   }
 };

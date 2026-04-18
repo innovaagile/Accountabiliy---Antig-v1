@@ -1,8 +1,19 @@
-import { Router } from 'express';
-import { getCoachees, createCoachee } from '../controllers/coacheeController';
+import { Router, Request, Response, NextFunction } from 'express';
+import { obtenerCoachees, obtenerCoacheePorId, createCoachee } from '../controllers/coacheeController';
+import { protect, AuthRequest } from '../middlewares/authMiddleware';
 
 const router = Router();
-router.get('/', getCoachees);
-router.post('/', createCoachee);
+
+const ensureAdmin = (req: AuthRequest, res: Response, next: NextFunction): void => {
+  if (req.user && req.user.role === 'ADMIN') {
+    next();
+  } else {
+    res.status(403).json({ message: 'No autorizado, requiere acceso de Administrador' });
+  }
+};
+
+router.get('/', protect, ensureAdmin, obtenerCoachees);
+router.get('/:id', protect, ensureAdmin, obtenerCoacheePorId);
+router.post('/', protect, ensureAdmin, createCoachee);
 
 export default router;

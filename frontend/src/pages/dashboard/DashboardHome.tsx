@@ -14,11 +14,28 @@ const DashboardHome = () => {
   const [isExportarOpen, setIsExportarOpen] = useState(false);
   const [coachees, setCoachees] = useState<any[]>([]);
 
-  // Efecto que llama a la Base de Datos al abrir la pantalla
+  const [search, setSearch] = useState('');
+  const [empresa, setEmpresa] = useState('');
+  const [cargo, setCargo] = useState('');
+  const [servicio, setServicio] = useState('');
+  const [estado, setEstado] = useState('');
+
+  // Efecto que llama a la Base de Datos con debounce
   useEffect(() => {
     const fetchCoachees = async () => {
       try {
-        const response = await fetch('/api/coachees');
+        const queryParams = new URLSearchParams();
+        if (search) queryParams.append('search', search);
+        if (empresa) queryParams.append('empresa', empresa);
+        if (cargo) queryParams.append('cargo', cargo);
+        if (servicio) queryParams.append('servicio', servicio);
+        if (estado) queryParams.append('estado', estado);
+
+        const response = await fetch(`http://localhost:3000/api/coachees?${queryParams.toString()}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
         if (response.ok) {
           const data = await response.json();
           setCoachees(data);
@@ -27,8 +44,13 @@ const DashboardHome = () => {
         console.error('Error al cargar la BD:', error);
       }
     };
-    fetchCoachees();
-  }, []);
+
+    const timer = setTimeout(() => {
+      fetchCoachees();
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [search, empresa, cargo, servicio, estado]);
 
   const handleAgregarCoachee = (nuevoCoachee: any) => {
     setCoachees([...coachees, nuevoCoachee]);
@@ -59,7 +81,43 @@ const DashboardHome = () => {
         <Link to="/dashboard/frases" className="flex items-center gap-2 bg-teal-800 hover:bg-teal-900 text-white px-4 py-2 rounded-md font-medium text-sm transition-colors shadow-sm"><MessageSquare className="w-4 h-4" />Gestionar Frases</Link>
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mt-6">
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 mt-6">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
+            <input 
+              type="text" 
+              placeholder="Buscar..." 
+              className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <select className="px-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 text-gray-600" value={empresa} onChange={e=>setEmpresa(e.target.value)}>
+            <option value="">Empresa (Todas)</option>
+            <option value="InnovaAgile">InnovaAgile</option>
+            <option value="Cliente A">Cliente A</option>
+          </select>
+          <select className="px-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 text-gray-600" value={cargo} onChange={e=>setCargo(e.target.value)}>
+            <option value="">Cargo (Todos)</option>
+            <option value="Gerente">Gerente</option>
+            <option value="Director">Director</option>
+            <option value="Jefe de Área">Jefe de Área</option>
+          </select>
+          <select className="px-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 text-gray-600" value={servicio} onChange={e=>setServicio(e.target.value)}>
+            <option value="">Servicio (Todos)</option>
+            <option value="SPRINT_4S">Sprint 4S</option>
+            <option value="SPRINT EJECUTIVO">Sprint Ejecutivo</option>
+          </select>
+          <select className="px-3 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 text-gray-600" value={estado} onChange={e=>setEstado(e.target.value)}>
+            <option value="">Estado (Todos)</option>
+            <option value="activo">Activos</option>
+            <option value="inactivo">Inactivos</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mt-4">
         <div className="px-6 py-4 border-b border-gray-200 bg-gray-50"><h3 className="text-lg font-semibold text-gray-800">Mis Coachees</h3></div>
         <div className="divide-y divide-gray-200">
           {coachees.map((coachee) => (
@@ -74,11 +132,11 @@ const DashboardHome = () => {
                 </div>
               </div>
               <div className="flex items-center gap-4 flex-wrap justify-end">
-                <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800">{coachee.estado}</span>
+                <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${coachee.estado === 'Activo' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>{coachee.estado}</span>
                 <button className="flex items-center gap-1 text-sm text-gray-600 hover:text-blue-600 transition-colors"><Eye className="w-4 h-4" /> Ver Página</button>
                 <button className="flex items-center gap-1 text-sm text-gray-600 hover:text-orange-600 transition-colors"><ListTodo className="w-4 h-4" /> Hábitos</button>
                 <button className="flex items-center gap-1 text-sm text-gray-600 hover:text-purple-600 transition-colors"><RefreshCw className="w-4 h-4" /> Ciclo</button>
-                <button className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 transition-colors"><Info className="w-4 h-4" /> Info</button>
+                <Link to={`/dashboard/coachee/${coachee.id}`} className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 transition-colors"><Info className="w-4 h-4" /> Info</Link>
                 <button className="flex items-center gap-1 text-sm text-red-500 hover:text-red-700 transition-colors"><UserMinus className="w-4 h-4" /> Desact.</button>
               </div>
             </div>
