@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import MainLayout from './components/layout/MainLayout';
 import DashboardHome from './pages/dashboard/DashboardHome';
+import GestionFrases from './pages/dashboard/GestionFrases';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuth();
@@ -30,6 +31,7 @@ function App() {
             <Route index element={<DashboardHome />} />
             <Route path="usuarios" element={<div className="p-4 bg-white rounded shadow-sm">Módulo Usuarios (Construcción)</div>} />
             <Route path="configuracion" element={<div className="p-4 bg-white rounded shadow-sm">Configuración (Construcción)</div>} />
+            <Route path="frases" element={<GestionFrases />} />
           </Route>
 
           {/* Redirección por defecto */}

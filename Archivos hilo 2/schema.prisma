@@ -112,20 +112,3 @@ model Cumplimiento {
 
   @@unique([tareaId, userId, fecha])
 }
-
-enum TipoFrase {
-  BIENVENIDA
-  DESPEDIDA
-  MOTIVACIONAL_ALTA
-  MOTIVACIONAL_MEDIA
-  MOTIVACIONAL_BAJA
-}
-
-model Frase {
-  id        String    @id @default(uuid())
-  texto     String
-  tipo      TipoFrase
-  activa    Boolean   @default(true)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-}
