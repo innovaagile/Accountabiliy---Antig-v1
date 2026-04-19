@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
+import bcrypt from 'bcrypt';
 import prisma from '../config/db';
+import { enviarCorreoBienvenida, enviarCorreoReseteo, enviarCorreoContrato } from '../utils/emailService';
 
 export const obtenerCoachees = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -90,10 +92,14 @@ export const createCoachee = async (req: Request, res: Response): Promise<void> 
     const exists = await prisma.user.findUnique({ where: { email } });
     if (exists) { res.status(400).json({ message: 'El coachee ya existe' }); return; }
     
+    const tempPassword = Math.random().toString(36).slice(-8);
+    const saltRounds = 10;
+    const passwordHash = await bcrypt.hash(tempPassword, saltRounds);
+
     const newCoachee = await prisma.user.create({
       data: {
         nombre, apellido, email,
-        passwordHash: '$2b$10$dummyHashDePrueba123',
+        passwordHash: passwordHash,
         role: 'COACHEE',
         pais, telefono: `+56 ${telefono}`,
         empresa, cargo,
@@ -101,6 +107,8 @@ export const createCoachee = async (req: Request, res: Response): Promise<void> 
         frecuenciaRecordatorios: frecuencia,
       }
     });
+
+    await enviarCorreoBienvenida(email, nombre, tempPassword);
 
     res.status(201).json({
       id: newCoachee.id,
@@ -154,5 +162,50 @@ export const eliminarCoachee = async (req: Request, res: Response): Promise<void
   } catch (error) {
     console.error('Error al eliminar coachee:', error);
     res.status(500).json({ message: 'Error interno del servidor' });
+  }
+};
+
+export const resetearPassword = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    
+    // Generar contraseña temporal de 8 caracteres alfanuméricos
+    const tempPassword = Math.random().toString(36).slice(-8);
+    
+    // Hashear la contraseña
+    const saltRounds = 10;
+    const passwordHash = await bcrypt.hash(tempPassword, saltRounds);
+    
+    // Actualizar base de datos
+    const coachee = await prisma.user.update({
+      where: { id },
+      data: { passwordHash }
+    });
+
+    // Enviar email falso estructurado
+    await enviarCorreoReseteo(coachee.email, coachee.nombre, tempPassword);
+
+    res.json({ message: 'Contraseña reseteada con éxito' });
+  } catch (error) {
+    console.error('Error al resetear password:', error);
+    res.status(500).json({ message: 'Error interno del servidor al resetear la clave' });
+  }
+};
+
+export const enviarContrato = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const coachee = await prisma.user.findUnique({ where: { id } });
+    if (!coachee) {
+        res.status(404).json({ message: 'Coachee no encontrado' });
+        return;
+    }
+
+    await enviarCorreoContrato(coachee.email, coachee.nombre);
+
+    res.json({ message: 'Contrato enviado exitosamente' });
+  } catch (error) {
+    console.error('Error al enviar contrato:', error);
+    res.status(500).json({ message: 'Error interno del servidor al enviar contrato' });
   }
 };

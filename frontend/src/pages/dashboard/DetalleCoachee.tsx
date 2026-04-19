@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit2, KeyRound, Trash2, PlayCircle } from 'lucide-react';
+import { ArrowLeft, Edit2, KeyRound, Trash2, PlayCircle, FileText } from 'lucide-react';
 
 const DetalleCoachee = () => {
     const { id } = useParams();
@@ -16,6 +16,15 @@ const DetalleCoachee = () => {
     // Modal de Eliminación
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [deleting, setDeleting] = useState(false);
+
+    // Modal de Reseteo
+    const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+    const [resetting, setResetting] = useState(false);
+    const [resetSuccess, setResetSuccess] = useState(false);
+
+    // Contrato
+    const [sendingContract, setSendingContract] = useState(false);
+    const [contractSuccess, setContractSuccess] = useState(false);
 
     const fetchCoachee = async () => {
         try {
@@ -110,6 +119,53 @@ const DetalleCoachee = () => {
             console.error("Error en conexión:", err);
         } finally {
             setDeleting(false);
+        }
+    };
+
+    const handleResetPassword = async () => {
+        setResetting(true);
+        try {
+            const res = await fetch(`/api/coachees/${id}/reset-password`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+
+            if (res.ok) {
+                setIsResetModalOpen(false);
+                setResetSuccess(true);
+                setTimeout(() => setResetSuccess(false), 4000);
+            } else {
+                console.error("Error al resetear contraseña");
+            }
+        } catch (err) {
+            console.error("Error en conexión:", err);
+        } finally {
+            setResetting(false);
+        }
+    };
+
+    const handleSendContract = async () => {
+        setSendingContract(true);
+        try {
+            const res = await fetch(`/api/coachees/${id}/enviar-contrato`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+
+            if (res.ok) {
+                setContractSuccess(true);
+                setTimeout(() => setContractSuccess(false), 4000);
+            } else {
+                console.error("Error al enviar contrato");
+            }
+        } catch (err) {
+            console.error("Error en conexión al enviar contrato:", err);
+        } finally {
+            setSendingContract(false);
         }
     };
 
@@ -271,9 +327,25 @@ const DetalleCoachee = () => {
                 )}
             </div>
 
+            {/* ESTADO DE FEEDBACK TEMPORAL (TOAST) */}
+            {resetSuccess && (
+                <div className="absolute top-24 left-1/2 -translate-x-1/2 z-40 bg-[#A9D42C] text-white px-8 py-3 rounded-xl font-bold shadow-lg animate-bounce">
+                    Contraseña reseteada con éxito
+                </div>
+            )}
+            
+            {contractSuccess && (
+                <div className="absolute top-24 left-1/2 -translate-x-1/2 z-40 bg-blue-500 text-white px-8 py-3 rounded-xl font-bold shadow-lg animate-bounce">
+                    Contrato enviado con éxito al correo del coachee
+                </div>
+            )}
+
             {/* NIVEL 2: FILA DE BOTONES INFERIORES */}
             <div className="flex flex-row gap-4">
-                <button className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold shadow-sm">
+                <button 
+                    onClick={() => setIsResetModalOpen(true)}
+                    className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold shadow-sm"
+                >
                     <KeyRound className="w-5 h-5" /> Resetear Contraseña
                 </button>
                 <button 
@@ -289,7 +361,17 @@ const DetalleCoachee = () => {
 
             {/* NIVEL 3: TARJETA CICLOS DE TRABAJO */}
             <div className="w-full bg-white rounded-2xl p-8 shadow-[14px_17px_40px_4px_rgba(112,144,176,0.08)]">
-                <h2 className="text-xl font-black text-[#1B254B] mb-6 pb-4 border-b-2 border-[#A9D42C] tracking-tight">Ciclos de Trabajo</h2>
+                <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-xl font-black text-[#1B254B] tracking-tight">Ciclos de Trabajo</h2>
+                    <button 
+                        onClick={handleSendContract}
+                        disabled={sendingContract}
+                        className="flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-lg font-bold text-sm transition-colors"
+                    >
+                        <FileText className="w-4 h-4" />
+                        {sendingContract ? 'Enviando...' : 'Enviar Contrato'}
+                    </button>
+                </div>
                 
                 <div className="space-y-6">
                     {coachee.ciclos && coachee.ciclos.length > 0 ? (
@@ -366,6 +448,39 @@ const DetalleCoachee = () => {
                                 className="flex-1 py-3 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold transition-colors"
                             >
                                 {deleting ? 'Eliminando...' : 'Sí, ELIMINAR'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL DE RESETEO DE CONTRASEÑA */}
+            {isResetModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md p-4">
+                    <div className="bg-white rounded-2xl w-full max-w-md p-8 shadow-[14px_17px_40px_4px_rgba(112,144,176,0.08)] flex flex-col items-center text-center">
+                        <div className="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center mb-6">
+                            <KeyRound className="w-8 h-8 text-orange-500" />
+                        </div>
+                        <h2 className="text-2xl font-black text-[#1B254B] mb-4 font-['Plus_Jakarta_Sans',_sans-serif] tracking-tight">
+                            Resetear Contraseña
+                        </h2>
+                        <p className="text-gray-500 font-bold mb-8">
+                            ¿Estás seguro de que deseas resetear la contraseña de {coachee.nombre}? El usuario recibirá una nueva clave temporal por correo electrónico.
+                        </p>
+                        <div className="flex w-full gap-4">
+                            <button 
+                                onClick={() => setIsResetModalOpen(false)}
+                                disabled={resetting}
+                                className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-[#1B254B] font-bold transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button 
+                                onClick={handleResetPassword}
+                                disabled={resetting}
+                                className="flex-1 py-3 px-4 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold transition-colors shadow-sm"
+                            >
+                                {resetting ? 'Reseteando...' : 'Sí, Resetear'}
                             </button>
                         </div>
                     </div>
