@@ -1,5 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { obtenerCoachees, obtenerCoacheePorId, createCoachee, actualizarCoachee, eliminarCoachee, resetearPassword, enviarContrato } from '../controllers/coacheeController';
+import { obtenerCoachees, obtenerCoacheePorId, createCoachee, actualizarCoachee, eliminarCoachee, resetearPassword, enviarContrato, crearCicloInteligente, eliminarCiclo, actualizarCiclo } from '../controllers/coacheeController';
 import { protect, AuthRequest } from '../middlewares/authMiddleware';
 
 const router = Router();
@@ -19,5 +19,8 @@ router.put('/:id', protect, ensureAdmin, actualizarCoachee);
 router.delete('/:id', protect, ensureAdmin, eliminarCoachee);
 router.post('/:id/reset-password', protect, ensureAdmin, resetearPassword);
 router.post('/:id/enviar-contrato', protect, ensureAdmin, enviarContrato);
+router.post('/:id/ciclos', protect, ensureAdmin, crearCicloInteligente);
+router.delete('/:id/ciclos/:cicloId', protect, ensureAdmin, eliminarCiclo);
+router.put('/:id/ciclos/:cicloId', protect, ensureAdmin, actualizarCiclo);
 
 export default router;

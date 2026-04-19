@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import prisma from '../config/db';
 import { enviarCorreoBienvenida, enviarCorreoReseteo, enviarCorreoContrato } from '../utils/emailService';
+import { calcularFechaFinHabil } from '../utils/dateUtils';
 
 export const obtenerCoachees = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -208,4 +209,95 @@ export const enviarContrato = async (req: Request, res: Response): Promise<void>
     console.error('Error al enviar contrato:', error);
     res.status(500).json({ message: 'Error interno del servidor al enviar contrato' });
   }
+};
+
+export const crearCicloInteligente = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const body = req.body;
+    let fechaInicioObj = new Date();
+    if (body && body.fechaInicio) {
+      fechaInicioObj = new Date(body.fechaInicio);
+    }
+
+    const coachee = await prisma.user.findUnique({
+      where: { id },
+      include: { ciclos: true }
+    });
+
+    if (!coachee) {
+      res.status(404).json({ message: 'Coachee no encontrado' });
+      return;
+    }
+
+    const { servicioContratado } = coachee;
+
+    if (servicioContratado === 'Audit Toolkit' || servicioContratado === 'Enterprise Execution') {
+      res.status(400).json({ message: 'Este servicio no soporta la creación de ciclos' });
+      return;
+    }
+
+    let diasHabiles = 0;
+    if (servicioContratado === 'Sprint Digital 4S') {
+      diasHabiles = 20;
+    } else if (servicioContratado === 'Executive Mastery') {
+      diasHabiles = 40;
+    } else {
+      res.status(400).json({ message: 'Servicio contratado inválido o no soportado' });
+      return;
+    }
+
+    const fechaFin = calcularFechaFinHabil(fechaInicioObj, diasHabiles);
+    
+    // Si queremos el nombre "Ciclo X". Prisma schema de Ciclo no tiene un campo "nombre",
+    // pero si requiere producto, estado, totalDias, fechaInicio, fechaFin
+    const nuevoCiclo = await prisma.ciclo.create({
+      data: {
+        userId: id,
+        fechaInicio: fechaInicioObj,
+        fechaFin: fechaFin,
+        producto: servicioContratado,
+        totalDias: diasHabiles,
+        estado: 'ACTIVO',
+        diaActual: 1,
+        comodinesUsados: 0
+      }
+    });
+
+    res.status(201).json(nuevoCiclo);
+  } catch (error) {
+    console.error('Error al crear ciclo inteligente:', error);
+    res.status(500).json({ message: 'Error interno del servidor' });
+  }
+};
+
+export const eliminarCiclo = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { cicloId } = req.params;
+        await prisma.ciclo.delete({ where: { id: cicloId } });
+        res.json({ message: 'Ciclo eliminado correctamente' });
+    } catch (error) {
+        console.error('Error al eliminar ciclo:', error);
+        res.status(500).json({ message: 'Error interno al eliminar ciclo' });
+    }
+};
+
+export const actualizarCiclo = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { cicloId } = req.params;
+        const { nombre, fechaInicio, fechaFin } = req.body;
+        
+        await prisma.ciclo.update({
+            where: { id: cicloId },
+            data: {
+                nombre,
+                fechaInicio: new Date(fechaInicio),
+                fechaFin: new Date(fechaFin)
+            }
+        });
+        res.json({ message: 'Ciclo actualizado correctamente' });
+    } catch (error) {
+        console.error('Error al actualizar ciclo:', error);
+        res.status(500).json({ message: 'Error interno al actualizar ciclo' });
+    }
 };

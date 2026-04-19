@@ -75,6 +75,7 @@ model Diagnostico {
 model Ciclo {
   id                String          @id @default(uuid())
   userId            String
+  nombre            String?
   fechaInicio       DateTime
   fechaFin          DateTime
   producto          String          @default("SPRINT_4S")

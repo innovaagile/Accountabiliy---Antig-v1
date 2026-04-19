@@ -60,3 +60,22 @@ export const enviarCorreoReseteo = async (email: string, nombre: string, nuevaPa
   console.log(`Cuerpo HTML:\n${html}`);
   console.log(`==========================================\n`);
 };
+
+export const enviarCorreoContrato = async (email: string, nombre: string): Promise<void> => {
+  const contenidoHTML = `
+    <h1 style="color: #A9D42C; font-size: 24px; margin-bottom: 20px; text-align: center;">¡Compromiso de Excelencia Firmado! ✍️</h1>
+    <p style="font-size: 16px; line-height: 1.5; margin-bottom: 20px;">Hola <strong>${nombre}</strong>,</p>
+    <p style="font-size: 16px; line-height: 1.5; margin-bottom: 20px;">¡Felicitaciones por dar este paso! Has firmado oficialmente tu Contrato de Excelencia.</p>
+    <p style="font-size: 16px; line-height: 1.5; margin-bottom: 20px;">Se adjunta a este correo una copia en PDF para tus registros personales.</p>
+  `;
+
+  const html = generarPlantillaBase(contenidoHTML);
+
+  console.log(`\n==========================================`);
+  console.log(`[SIMULACIÓN DE EMAIL: CONTRATO DE EXCELENCIA]`);
+  console.log(`Enviado a: ${email}`);
+  console.log(`Asunto:   ¡Compromiso de Excelencia Firmado!`);
+  console.log(`Cuerpo HTML:\n${html}`);
+  console.log(`[ADJUNTO SIMULADO: Contrato_Excelencia_${nombre.replace(/ /g, '_')}.pdf]`);
+  console.log(`==========================================\n`);
+};

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit2, KeyRound, Trash2, PlayCircle, FileText } from 'lucide-react';
+import { ArrowLeft, Edit2, KeyRound, Trash2, PlayCircle, FileText, ChevronDown } from 'lucide-react';
+import { contarDiasHabiles } from '../../utils/dateUtils';
 
 const DetalleCoachee = () => {
     const { id } = useParams();
@@ -25,6 +26,95 @@ const DetalleCoachee = () => {
     // Contrato
     const [sendingContract, setSendingContract] = useState(false);
     const [contractSuccess, setContractSuccess] = useState(false);
+
+    // Modal de Nuevo Ciclo
+    const [isNewCicloModalOpen, setIsNewCicloModalOpen] = useState(false);
+    const [generatingCiclo, setGeneratingCiclo] = useState(false);
+    const [cicloSuccess, setCicloSuccess] = useState(false);
+    const [newCicloData, setNewCicloData] = useState({
+        nombre: 'Ciclo 1',
+        fechaInicio: new Date().toISOString().split('T')[0]
+    });
+
+    // Editar Ciclo
+    const [isEditCicloModalOpen, setIsEditCicloModalOpen] = useState(false);
+    const [updatingCiclo, setUpdatingCiclo] = useState(false);
+    const [updateCicloSuccess, setUpdateCicloSuccess] = useState(false);
+    const [editCicloData, setEditCicloData] = useState<any>({
+        id: '',
+        nombre: '',
+        fechaInicio: '',
+        fechaFin: ''
+    });
+
+    const [expandedCiclo, setExpandedCiclo] = useState<string | null>(null);
+
+    const toggleCiclo = (cicloId: string) => {
+        if (expandedCiclo === cicloId) setExpandedCiclo(null);
+        else setExpandedCiclo(cicloId);
+    };
+
+    const handleDeleteCiclo = async (e: React.MouseEvent, cicloId: string) => {
+        e.stopPropagation();
+        if (window.confirm("¿Estás seguro de eliminar este ciclo?")) {
+            try {
+                const res = await fetch(`/api/coachees/${id}/ciclos/${cicloId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+                if (res.ok) {
+                    await fetchCoachee();
+                } else {
+                    console.error("Error al eliminar ciclo");
+                }
+            } catch (error) {
+                console.error("Error en conexión:", error);
+            }
+        }
+    };
+
+    const openEditCicloModal = (ciclo: any, defaultName: string) => {
+        setEditCicloData({
+            id: ciclo.id,
+            nombre: ciclo.nombre || defaultName,
+            fechaInicio: new Date(ciclo.fechaInicio).toISOString().split('T')[0],
+            fechaFin: new Date(ciclo.fechaFin).toISOString().split('T')[0]
+        });
+        setIsEditCicloModalOpen(true);
+    };
+
+    const handleUpdateCiclo = async () => {
+        setUpdatingCiclo(true);
+        try {
+            const res = await fetch(`/api/coachees/${id}/ciclos/${editCicloData.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({
+                    nombre: editCicloData.nombre,
+                    fechaInicio: editCicloData.fechaInicio,
+                    fechaFin: editCicloData.fechaFin
+                })
+            });
+
+            if (res.ok) {
+                setIsEditCicloModalOpen(false);
+                setUpdateCicloSuccess(true);
+                setTimeout(() => setUpdateCicloSuccess(false), 4000);
+                await fetchCoachee();
+            } else {
+                console.error("Error al actualizar ciclo");
+            }
+        } catch (err) {
+            console.error("Error en conexión:", err);
+        } finally {
+            setUpdatingCiclo(false);
+        }
+    };
 
     const fetchCoachee = async () => {
         try {
@@ -166,6 +256,36 @@ const DetalleCoachee = () => {
             console.error("Error en conexión al enviar contrato:", err);
         } finally {
             setSendingContract(false);
+        }
+    };
+
+    const handleGenerateCiclo = async () => {
+        setGeneratingCiclo(true);
+        try {
+            const res = await fetch(`/api/coachees/${id}/ciclos`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({
+                    nombre: newCicloData.nombre,
+                    fechaInicio: newCicloData.fechaInicio
+                })
+            });
+
+            if (res.ok) {
+                setIsNewCicloModalOpen(false);
+                setCicloSuccess(true);
+                setTimeout(() => setCicloSuccess(false), 4000);
+                await fetchCoachee();
+            } else {
+                console.error("Error al generar ciclo");
+            }
+        } catch (err) {
+            console.error("Error en conexión:", err);
+        } finally {
+            setGeneratingCiclo(false);
         }
     };
 
@@ -340,6 +460,18 @@ const DetalleCoachee = () => {
                 </div>
             )}
 
+            {cicloSuccess && (
+                <div className="absolute top-24 left-1/2 -translate-x-1/2 z-40 bg-[#A9D42C] text-white px-8 py-3 rounded-xl font-bold shadow-lg animate-bounce">
+                    Ciclo generado correctamente
+                </div>
+            )}
+
+            {updateCicloSuccess && (
+                <div className="absolute top-24 left-1/2 -translate-x-1/2 z-40 bg-blue-500 text-white px-8 py-3 rounded-xl font-bold shadow-lg animate-bounce">
+                    Ciclo actualizado correctamente
+                </div>
+            )}
+
             {/* NIVEL 2: FILA DE BOTONES INFERIORES */}
             <div className="flex flex-row gap-4">
                 <button 
@@ -363,53 +495,95 @@ const DetalleCoachee = () => {
             <div className="w-full bg-white rounded-2xl p-8 shadow-[14px_17px_40px_4px_rgba(112,144,176,0.08)]">
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="text-xl font-black text-[#1B254B] tracking-tight">Ciclos de Trabajo</h2>
-                    <button 
-                        onClick={handleSendContract}
-                        disabled={sendingContract}
-                        className="flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-lg font-bold text-sm transition-colors"
-                    >
-                        <FileText className="w-4 h-4" />
-                        {sendingContract ? 'Enviando...' : 'Enviar Contrato'}
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button 
+                            onClick={() => setIsNewCicloModalOpen(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#A9D42C] hover:bg-[#8eb825] text-white rounded-lg font-bold text-sm transition-colors shadow-sm"
+                        >
+                            + Nuevo Ciclo
+                        </button>
+                        <button 
+                            onClick={handleSendContract}
+                            disabled={sendingContract}
+                            className="flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-lg font-bold text-sm transition-colors"
+                        >
+                            <FileText className="w-4 h-4" />
+                            {sendingContract ? 'Enviando...' : 'Enviar Contrato'}
+                        </button>
+                    </div>
                 </div>
                 
                 <div className="space-y-6">
                     {coachee.ciclos && coachee.ciclos.length > 0 ? (
                         coachee.ciclos.map((ciclo: any, index: number) => {
+                            const isExpanded = expandedCiclo === ciclo.id;
                             const tareasTotal = ciclo.tareas ? ciclo.tareas.length : 0;
                             const tareasCompletadas = ciclo.tareas ? ciclo.tareas.filter((t:any) => !t.activa).length : 0; 
                             
                             return (
-                                <div key={ciclo.id} className="border border-gray-200 rounded-xl overflow-hidden bg-white">
-                                    <div className="bg-[#F4F7FE] px-6 py-4 flex justify-between items-center border-b-2 border-[#A9D42C]">
+                                <div key={ciclo.id} className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm transition-all duration-300">
+                                    <div 
+                                        className={`px-6 py-4 flex justify-between items-center cursor-pointer select-none transition-colors ${isExpanded ? 'bg-[#F4F7FE]' : 'bg-white hover:bg-gray-50'}`}
+                                        onClick={() => toggleCiclo(ciclo.id)}
+                                    >
                                         <div className="flex items-center gap-4">
-                                            <span className="font-black text-[#1B254B]">CICLO {coachee.ciclos.length - index}: {ciclo.producto}</span>
-                                            <span className={`text-[10px] font-black px-2.5 py-1 rounded-md uppercase tracking-widest ${ciclo.estado === 'ACTIVO' ? 'bg-[#A9D42C] bg-opacity-20 text-green-800' : 'bg-gray-200 text-gray-600'}`}>
-                                                {ciclo.estado}
-                                            </span>
-                                        </div>
-                                        <span className="text-xs font-bold text-gray-500 bg-white px-3 py-1.5 rounded-lg border border-gray-100">
-                                            Inicio: {new Date(ciclo.fechaInicio).toLocaleDateString()}
-                                        </span>
-                                    </div>
-                                    <div className="p-6">
-                                        <div className="flex justify-between items-end mb-4">
-                                            <h4 className="font-bold text-gray-400 uppercase tracking-widest text-xs">Progreso</h4>
-                                            <span className="bg-gray-100 text-[#1B254B] font-bold px-3 py-1 rounded-lg text-xs">
-                                                {tareasCompletadas}/{tareasTotal} Completadas
-                                            </span>
-                                        </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            {ciclo.tareas && ciclo.tareas.map((tarea: any) => (
-                                                <TaskItem key={tarea.id} label={tarea.nombre} completed={!tarea.activa} />
-                                            ))}
-                                            {(!ciclo.tareas || ciclo.tareas.length === 0) && (
-                                                <div className="col-span-2 text-sm text-gray-400 font-bold py-6 border-2 border-dashed border-gray-200 rounded-xl text-center">
-                                                    No hay tareas configuradas.
+                                            <div className={`transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
+                                                <ChevronDown className="text-gray-400 w-5 h-5" />
+                                            </div>
+                                            <div>
+                                                <div className="flex items-center gap-3 mb-1">
+                                                    <span className="font-black text-[#1B254B] text-lg">
+                                                        {ciclo.nombre ? ciclo.nombre : `Ciclo ${coachee.ciclos.length - index}: ${ciclo.producto}`}
+                                                    </span>
+                                                    <span className={`text-[10px] font-black px-2.5 py-1 rounded-md uppercase tracking-widest flex items-center gap-2 ${ciclo.estado === 'ACTIVO' ? 'bg-[#A9D42C] bg-opacity-20 text-green-800' : 'bg-gray-200 text-gray-600'}`}>
+                                                        {ciclo.estado}
+                                                    </span>
+                                                    <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded-md uppercase tracking-widest">
+                                                        {contarDiasHabiles(ciclo.fechaInicio, ciclo.fechaFin)} días hábiles
+                                                    </span>
                                                 </div>
-                                            )}
+                                                <p className="text-sm font-bold text-gray-400">
+                                                    Inicio: {new Date(ciclo.fechaInicio).toLocaleDateString()} | Término: {new Date(ciclo.fechaFin).toLocaleDateString()}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="flex items-center gap-6">
+                                            <span className="text-sm font-bold text-gray-500 bg-white px-3 py-1.5 rounded-lg border border-gray-100 shadow-sm">
+                                                Tareas ({tareasCompletadas}/{tareasTotal})
+                                            </span>
+                                            <button 
+                                                onClick={(e) => handleDeleteCiclo(e, ciclo.id)}
+                                                className="text-sm font-bold text-red-500 hover:text-red-700 transition-colors"
+                                            >
+                                                Eliminar
+                                            </button>
                                         </div>
                                     </div>
+                                    
+                                    {isExpanded && (
+                                        <div className="p-6 border-t border-gray-100 bg-white">
+                                            <div className="flex justify-between items-end mb-4">
+                                                <h4 className="font-bold text-gray-400 uppercase tracking-widest text-xs">Progreso</h4>
+                                                <button 
+                                                    onClick={() => openEditCicloModal(ciclo, `Ciclo ${coachee.ciclos.length - index}`)}
+                                                    className="flex items-center gap-2 text-[12px] font-bold text-gray-400 hover:text-blue-500 transition-colors"
+                                                >
+                                                    <Edit2 className="w-4 h-4" /> Editar Ciclo
+                                                </button>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {ciclo.tareas && ciclo.tareas.map((tarea: any) => (
+                                                    <TaskItem key={tarea.id} label={tarea.nombre} completed={!tarea.activa} />
+                                                ))}
+                                                {(!ciclo.tareas || ciclo.tareas.length === 0) && (
+                                                    <div className="col-span-2 text-sm text-gray-400 font-bold py-6 border-2 border-dashed border-gray-200 rounded-xl text-center">
+                                                        No hay tareas configuradas para este ciclo. Usa "Continuar Ciclo" para administrarlas.
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )
                         })
@@ -481,6 +655,116 @@ const DetalleCoachee = () => {
                                 className="flex-1 py-3 px-4 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold transition-colors shadow-sm"
                             >
                                 {resetting ? 'Reseteando...' : 'Sí, Resetear'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL NUEVO CICLO INTELIGENTE */}
+            {isNewCicloModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md p-4">
+                    <div className="bg-white rounded-2xl w-full max-w-md p-8 shadow-[14px_17px_40px_4px_rgba(112,144,176,0.08)] flex flex-col">
+                        <h2 className="text-2xl font-black text-[#1B254B] mb-6 font-['Plus_Jakarta_Sans',_sans-serif] tracking-tight">
+                            Generar Nuevo Ciclo
+                        </h2>
+                        
+                        <div className="space-y-4 mb-8">
+                            <div>
+                                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Nombre del Ciclo</label>
+                                <input 
+                                    type="text" 
+                                    className="w-full px-4 py-2.5 rounded-xl border-none bg-[#F4F7FE] focus:ring-2 focus:ring-[#A9D42C] outline-none text-sm font-bold text-[#1B254B]"
+                                    value={newCicloData.nombre}
+                                    onChange={(e) => setNewCicloData({...newCicloData, nombre: e.target.value})}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Fecha de Inicio</label>
+                                <input 
+                                    type="date" 
+                                    className="w-full px-4 py-2.5 rounded-xl border-none bg-[#F4F7FE] focus:ring-2 focus:ring-[#A9D42C] outline-none text-sm font-bold text-[#1B254B]"
+                                    value={newCicloData.fechaInicio}
+                                    onChange={(e) => setNewCicloData({...newCicloData, fechaInicio: e.target.value})}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex w-full gap-4">
+                            <button 
+                                onClick={() => setIsNewCicloModalOpen(false)}
+                                disabled={generatingCiclo}
+                                className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-[#1B254B] font-bold transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button 
+                                onClick={handleGenerateCiclo}
+                                disabled={generatingCiclo}
+                                className="flex-1 py-3 px-4 rounded-xl bg-[#A9D42C] hover:bg-[#8eb825] text-white font-bold transition-colors shadow-sm"
+                            >
+                                {generatingCiclo ? 'Generando...' : 'Generar Ciclo'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL EDITAR CICLO (MANUAL OVERRIDE) */}
+            {isEditCicloModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md p-4">
+                    <div className="bg-white rounded-2xl w-full max-w-md p-8 shadow-[14px_17px_40px_4px_rgba(112,144,176,0.08)] flex flex-col">
+                        <h2 className="text-2xl font-black text-[#1B254B] mb-6 font-['Plus_Jakarta_Sans',_sans-serif] tracking-tight">
+                            Editar Ciclo
+                        </h2>
+                        
+                        <div className="space-y-4 mb-8">
+                            <div>
+                                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Nombre del Ciclo</label>
+                                <input 
+                                    type="text" 
+                                    className="w-full px-4 py-2.5 rounded-xl border-none bg-[#F4F7FE] focus:ring-2 focus:ring-[#A9D42C] outline-none text-sm font-bold text-[#1B254B]"
+                                    value={editCicloData.nombre}
+                                    onChange={(e) => setEditCicloData({...editCicloData, nombre: e.target.value})}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Fecha de Inicio</label>
+                                <input 
+                                    type="date" 
+                                    className="w-full px-4 py-2.5 rounded-xl border-none bg-[#F4F7FE] focus:ring-2 focus:ring-[#A9D42C] outline-none text-sm font-bold text-[#1B254B]"
+                                    value={editCicloData.fechaInicio}
+                                    onChange={(e) => setEditCicloData({...editCicloData, fechaInicio: e.target.value})}
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Fecha de Término</label>
+                                <input 
+                                    type="date" 
+                                    className="w-full px-4 py-2.5 rounded-xl border-none bg-[#F4F7FE] focus:ring-2 focus:ring-[#A9D42C] outline-none text-sm font-bold text-[#1B254B]"
+                                    value={editCicloData.fechaFin}
+                                    onChange={(e) => setEditCicloData({...editCicloData, fechaFin: e.target.value})}
+                                />
+                            </div>
+                            <p className="text-[10px] text-gray-400 font-bold leading-relaxed pt-2">
+                                Modificar estas fechas sobrescribirá el cálculo automático del sistema. Úselo con precaución.
+                            </p>
+                        </div>
+
+                        <div className="flex w-full gap-4">
+                            <button 
+                                onClick={() => setIsEditCicloModalOpen(false)}
+                                disabled={updatingCiclo}
+                                className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-[#1B254B] font-bold transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button 
+                                onClick={handleUpdateCiclo}
+                                disabled={updatingCiclo}
+                                className="flex-1 py-3 px-4 rounded-xl bg-[#A9D42C] hover:bg-[#8eb825] text-white font-bold transition-colors shadow-sm"
+                            >
+                                {updatingCiclo ? 'Guardando...' : 'Guardar Cambios'}
                             </button>
                         </div>
                     </div>
