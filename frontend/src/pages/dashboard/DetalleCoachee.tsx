@@ -3,20 +3,60 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Edit2, KeyRound, Trash2, PlayCircle, FileText, ChevronDown } from 'lucide-react';
 import { contarDiasHabiles } from '../../utils/dateUtils';
 
+interface Tarea {
+    id: string;
+    nombre: string;
+    descripcion?: string;
+    periodicidad?: string;
+    horaProgramada?: string;
+    icono?: string;
+    activa: boolean;
+}
+
+interface Ciclo {
+    id: string;
+    nombre?: string;
+    fechaInicio: string;
+    fechaFin: string;
+    producto: string;
+    estado: string;
+    activo: boolean;
+    tareas: Tarea[];
+}
+
+interface Coachee {
+    id: string;
+    nombre: string;
+    apellido: string;
+    email: string;
+    pais?: string;
+    telefono?: string;
+    empresa?: string;
+    cargo?: string;
+    activo: boolean;
+    servicioContratado?: string;
+    frecuenciaRecordatorios?: string;
+    hasDiagnostico?: boolean;
+    ciclos?: Ciclo[];
+    contracts?: any[];
+}
+
 const DetalleCoachee = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     
-    const [coachee, setCoachee] = useState<any>(null);
+    const [coachee, setCoachee] = useState<Coachee | null>(null);
     const [loading, setLoading] = useState(true);
     
     const [isEditing, setIsEditing] = useState(false);
-    const [editData, setEditData] = useState<any>({});
+    const [editData, setEditData] = useState<Partial<Coachee>>({});
     const [saving, setSaving] = useState(false);
     
-    // Modal de Eliminación
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [deleting, setDeleting] = useState(false);
+
+    // Modal de Eliminación de Ciclo
+    const [cicloAEliminar, setCicloAEliminar] = useState<string | null>(null);
 
     // Modal de Reseteo
     const [isResetModalOpen, setIsResetModalOpen] = useState(false);
@@ -54,28 +94,30 @@ const DetalleCoachee = () => {
         else setExpandedCiclo(cicloId);
     };
 
-    const handleDeleteCiclo = async (e: React.MouseEvent, cicloId: string) => {
-        e.stopPropagation();
-        if (window.confirm("¿Estás seguro de eliminar este ciclo?")) {
-            try {
-                const res = await fetch(`/api/coachees/${id}/ciclos/${cicloId}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
-                    }
-                });
-                if (res.ok) {
-                    await fetchCoachee();
-                } else {
-                    console.error("Error al eliminar ciclo");
+    const handleConfirmDeleteCiclo = async () => {
+        if (!cicloAEliminar) return;
+        setProcessingCiclo(true);
+        try {
+            const res = await fetch(`/api/coachees/${id}/ciclos/${cicloAEliminar}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
                 }
-            } catch (error) {
-                console.error("Error en conexión:", error);
+            });
+            if (res.ok) {
+                setCicloAEliminar(null);
+                await fetchCoachee();
+            } else {
+                console.error("Error al eliminar ciclo");
             }
+        } catch (error) {
+            console.error("Error en conexión:", error);
+        } finally {
+            setProcessingCiclo(false);
         }
     };
 
-    const openCicloModal = (mode: 'CREATE' | 'CONTINUE' | 'EDIT', cicloToEdit?: any, defaultName?: string) => {
+    const openCicloModal = (mode: 'CREATE' | 'CONTINUE' | 'EDIT', cicloToEdit?: Ciclo, defaultName?: string) => {
         let defaultData = {
             id: '',
             nombre: `Ciclo ${coachee?.ciclos ? coachee.ciclos.length + 1 : 1}`,
@@ -106,7 +148,7 @@ const DetalleCoachee = () => {
         try {
             let endpoint = '';
             let method = '';
-            let bodyData: any = {
+            const bodyData: Record<string, string> = {
                 nombre: cicloModalState.data.nombre,
                 fechaInicio: cicloModalState.data.fechaInicio
             };
@@ -296,35 +338,7 @@ const DetalleCoachee = () => {
         }
     };
 
-    const handleGenerateCiclo = async () => {
-        setGeneratingCiclo(true);
-        try {
-            const res = await fetch(`/api/coachees/${id}/ciclos`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
-                body: JSON.stringify({
-                    nombre: newCicloData.nombre,
-                    fechaInicio: newCicloData.fechaInicio
-                })
-            });
 
-            if (res.ok) {
-                setIsNewCicloModalOpen(false);
-                setCicloSuccess(true);
-                setTimeout(() => setCicloSuccess(false), 4000);
-                await fetchCoachee();
-            } else {
-                console.error("Error al generar ciclo");
-            }
-        } catch (err) {
-            console.error("Error en conexión:", err);
-        } finally {
-            setGeneratingCiclo(false);
-        }
-    };
 
     if (loading || !coachee) return (
         <div className="min-h-screen flex items-center justify-center p-10 font-black text-[#1B254B]">
@@ -566,17 +580,17 @@ const DetalleCoachee = () => {
                 <div className="space-y-6">
                     {coachee.ciclos && coachee.ciclos.length > 0 ? (
                         [...coachee.ciclos]
-                            .sort((a: any, b: any) => new Date(b.fechaInicio).getTime() - new Date(a.fechaInicio).getTime())
-                            .filter((c: any) => filtroCiclos === 'todos' || c.activo === true)
-                            .map((ciclo: any, index: number) => {
+                            .sort((a: Ciclo, b: Ciclo) => new Date(b.fechaInicio).getTime() - new Date(a.fechaInicio).getTime())
+                            .filter((c: Ciclo) => filtroCiclos === 'todos' || c.activo === true)
+                            .map((ciclo: Ciclo, index: number) => {
                             const isExpanded = expandedCiclo === ciclo.id;
                             const tareasTotal = ciclo.tareas ? ciclo.tareas.length : 0;
-                            const tareasCompletadas = ciclo.tareas ? ciclo.tareas.filter((t:any) => !t.activa).length : 0; 
+                            const tareasCompletadas = ciclo.tareas ? ciclo.tareas.filter((t: Tarea) => !t.activa).length : 0; 
                             
                             // To accurately compute enumerations even when filtering, we compute it based on the original structure.
                             // The true index of the cycle in the history is based on how many cycles there are in total 
                             // assuming the backend returns them all. But we can just use the unsorted/unfiltered length.
-                            const cicloNumeration = coachee.ciclos.length - coachee.ciclos.findIndex((c: any) => c.id === ciclo.id);
+                            const cicloNumeration = coachee.ciclos!.length - coachee.ciclos!.findIndex((c: Ciclo) => c.id === ciclo.id);
                             const isActivo = ciclo.estado === 'ACTIVO' || ciclo.activo === true;
                             
                             return (
@@ -612,7 +626,7 @@ const DetalleCoachee = () => {
                                                 Tareas ({tareasCompletadas}/{tareasTotal})
                                             </span>
                                             <button 
-                                                onClick={(e) => handleDeleteCiclo(e, ciclo.id)}
+                                                onClick={(e) => { e.stopPropagation(); setCicloAEliminar(ciclo.id); }}
                                                 className="text-sm font-bold text-red-500 hover:text-red-700 transition-colors"
                                             >
                                                 Eliminar
@@ -632,7 +646,7 @@ const DetalleCoachee = () => {
                                                 </button>
                                             </div>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                {ciclo.tareas && ciclo.tareas.map((tarea: any) => (
+                                                {ciclo.tareas && ciclo.tareas.map((tarea: Tarea) => (
                                                     <TaskItem key={tarea.id} label={tarea.nombre} completed={!tarea.activa} />
                                                 ))}
                                                 {(!ciclo.tareas || ciclo.tareas.length === 0) && (
@@ -797,6 +811,39 @@ const DetalleCoachee = () => {
                                 className="flex-1 py-3 px-4 rounded-xl bg-[#A9D42C] hover:bg-[#8eb825] text-white font-bold transition-colors shadow-sm"
                             >
                                 {processingCiclo ? 'Guardando...' : (cicloModalState.mode === 'EDIT' ? 'Guardar Cambios' : 'Generar Ciclo')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL DE ELIMINACIÓN DE CICLO (Soft UI) */}
+            {cicloAEliminar && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md p-4">
+                    <div className="bg-white rounded-2xl w-full max-w-md p-8 shadow-[14px_17px_40px_4px_rgba(112,144,176,0.08)] flex flex-col items-center text-center">
+                        <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-6 border-4 border-white shadow-sm">
+                            <Trash2 className="w-8 h-8 text-red-500" />
+                        </div>
+                        <h2 className="text-2xl font-black text-[#1B254B] mb-4 font-['Plus_Jakarta_Sans',_sans-serif]">
+                            Eliminar Ciclo
+                        </h2>
+                        <p className="text-gray-500 font-bold mb-8 leading-relaxed">
+                            ⚠️ ¿Estás seguro de que deseas eliminar este ciclo y todas las tareas asociadas? Esta acción no se puede deshacer.
+                        </p>
+                        <div className="flex w-full gap-4">
+                            <button 
+                                onClick={() => setCicloAEliminar(null)}
+                                disabled={processingCiclo}
+                                className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-500 font-bold transition-colors shadow-sm"
+                            >
+                                Cancelar
+                            </button>
+                            <button 
+                                onClick={handleConfirmDeleteCiclo}
+                                disabled={processingCiclo}
+                                className="flex-1 py-3 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold transition-colors shadow-md"
+                            >
+                                {processingCiclo ? 'Eliminando...' : 'Sí, ELIMINAR'}
                             </button>
                         </div>
                     </div>
