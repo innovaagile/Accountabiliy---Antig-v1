@@ -145,3 +145,14 @@ export const actualizarCoachee = async (req: Request, res: Response): Promise<vo
     res.status(500).json({ message: 'Error interno al actualizar coachee' });
   }
 };
+
+export const eliminarCoachee = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    await prisma.user.delete({ where: { id } });
+    res.json({ message: 'Coachee eliminado correctamente' });
+  } catch (error) {
+    console.error('Error al eliminar coachee:', error);
+    res.status(500).json({ message: 'Error interno del servidor' });
+  }
+};

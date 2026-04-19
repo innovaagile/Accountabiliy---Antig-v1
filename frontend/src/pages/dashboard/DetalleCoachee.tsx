@@ -12,6 +12,10 @@ const DetalleCoachee = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [editData, setEditData] = useState<any>({});
     const [saving, setSaving] = useState(false);
+    
+    // Modal de Eliminación
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [deleting, setDeleting] = useState(false);
 
     const fetchCoachee = async () => {
         try {
@@ -83,6 +87,29 @@ const DetalleCoachee = () => {
             console.error("Error:", err);
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        setDeleting(true);
+        try {
+            const res = await fetch(`/api/coachees/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+
+            if (res.ok) {
+                setIsDeleteModalOpen(false);
+                navigate('/dashboard');
+            } else {
+                console.error("Error al eliminar coachee");
+            }
+        } catch (err) {
+            console.error("Error en conexión:", err);
+        } finally {
+            setDeleting(false);
         }
     };
 
@@ -249,7 +276,10 @@ const DetalleCoachee = () => {
                 <button className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold shadow-sm">
                     <KeyRound className="w-5 h-5" /> Resetear Contraseña
                 </button>
-                <button className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold shadow-sm">
+                <button 
+                    onClick={() => setIsDeleteModalOpen(true)}
+                    className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold shadow-sm"
+                >
                     <Trash2 className="w-5 h-5" /> Eliminar Coachee
                 </button>
                 <button className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-sm">
@@ -308,6 +338,39 @@ const DetalleCoachee = () => {
                     )}
                 </div>
             </div>
+
+            {/* MODAL DE ELIMINACIÓN (Soft UI Estricto) */}
+            {isDeleteModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md p-4">
+                    <div className="bg-white rounded-2xl w-full max-w-md p-8 shadow-[14px_17px_40px_4px_rgba(112,144,176,0.08)] flex flex-col items-center text-center">
+                        <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-6">
+                            <Trash2 className="w-8 h-8 text-red-500" />
+                        </div>
+                        <h2 className="text-2xl font-black text-[#1B254B] mb-4 font-['Plus_Jakarta_Sans',_sans-serif]">
+                            Eliminar Coachee
+                        </h2>
+                        <p className="text-gray-500 font-bold mb-8">
+                            ⚠️ ESTA ACCIÓN ES IRREVERSIBLE. ¿Realmente deseas eliminar a {coachee.nombre} {coachee.apellido} y todo su historial?
+                        </p>
+                        <div className="flex w-full gap-4">
+                            <button 
+                                onClick={() => setIsDeleteModalOpen(false)}
+                                disabled={deleting}
+                                className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-[#1B254B] font-bold transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button 
+                                onClick={handleDelete}
+                                disabled={deleting}
+                                className="flex-1 py-3 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold transition-colors"
+                            >
+                                {deleting ? 'Eliminando...' : 'Sí, ELIMINAR'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
