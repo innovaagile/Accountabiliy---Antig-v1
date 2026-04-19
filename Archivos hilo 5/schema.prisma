@@ -1,0 +1,114 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  COACH
+  COACHEE
+}
+
+enum ContractStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+}
+
+model User {
+  id                String          @id @default(uuid())
+  nombre            String
+  apellido          String
+  email             String          @unique
+  passwordHash      String
+  role              Role
+  activo            Boolean         @default(true)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  pais              String?
+  telefono          String?
+  empresa           String?
+  cargo             String?
+  contratoFirmado   Boolean         @default(false)
+  hasDiagnostico    Boolean         @default(false)
+
+  coachId           String?
+  coach             User?           @relation("CoachToCoachee", fields: [coachId], references: [id])
+  coachees          User[]          @relation("CoachToCoachee")
+
+  ciclos            Ciclo[]
+  cumplimientos     Cumplimiento[]
+  diagnosticos      Diagnostico[]
+  contracts         Contract[]
+}
+
+model Contract {
+  id                String          @id @default(uuid())
+  userId            String
+  content           Json
+  digitalSignature  String?
+  status            ContractStatus
+  createdAt         DateTime        @default(now())
+  lastInteractionAt DateTime?
+
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Diagnostico {
+  id                String          @id @default(uuid())
+  userId            String
+  fuga              String
+  puntosCriticos    String?
+  respuestas        Json
+  conclusionesAI    String?
+
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Ciclo {
+  id                String          @id @default(uuid())
+  userId            String
+  fechaInicio       DateTime
+  fechaFin          DateTime
+  producto          String          @default("SPRINT_4S")
+  estado            String          @default("ACTIVO")
+  comodinesUsados   Int             @default(0)
+  totalDias         Int             @default(20)
+  diaActual         Int             @default(1)
+
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tareas            Tarea[]
+}
+
+model Tarea {
+  id                String          @id @default(uuid())
+  cicloId           String
+  nombre            String
+  descripcion       String
+  periodicidad      String
+  horaProgramada    String
+  icono             String
+  activa            Boolean         @default(true)
+
+  ciclo             Ciclo           @relation(fields: [cicloId], references: [id], onDelete: Cascade)
+  cumplimientos     Cumplimiento[]
+}
+
+model Cumplimiento {
+  id                String          @id @default(uuid())
+  tareaId           String
+  userId            String
+  fecha             DateTime
+  completada        Boolean         @default(false)
+  aprendizajeDia    String?
+
+  tarea             Tarea           @relation(fields: [tareaId], references: [id], onDelete: Cascade)
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tareaId, userId, fecha])
+}
