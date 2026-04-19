@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import MainLayout from './components/layout/MainLayout';
 import DashboardHome from './pages/dashboard/DashboardHome';
 import GestionFrases from './pages/dashboard/GestionFrases';
+import DetalleCoachee from './pages/dashboard/DetalleCoachee';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuth();
@@ -32,6 +33,8 @@ function App() {
             <Route path="usuarios" element={<div className="p-4 bg-white rounded shadow-sm">Módulo Usuarios (Construcción)</div>} />
             <Route path="configuracion" element={<div className="p-4 bg-white rounded shadow-sm">Configuración (Construcción)</div>} />
             <Route path="frases" element={<GestionFrases />} />
+            <Route path="coachee/:id" element={<DetalleCoachee />} />
+
           </Route>
 
           {/* Redirección por defecto */}

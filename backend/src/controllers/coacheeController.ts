@@ -43,9 +43,8 @@ export const obtenerCoachees = async (req: Request, res: Response): Promise<void
       telefono: c.telefono || 'No especificado',
       empresa: c.empresa,
       cargo: c.cargo,
-      // Servicio usando su ciclo activo, de lo contrario fallback
-      plan: c.ciclos?.find((ci:any) => ci.estado === 'ACTIVO')?.producto || 'No asignado', 
-      frecuencia: 'CADA COMPROMISO', 
+      plan: c.servicioContratado || 'No asignado', 
+      frecuencia: c.frecuenciaRecordatorios || 'No especificada', 
       estado: c.activo ? 'Activo' : 'Inactivo',
       activo: c.activo,
     }));
@@ -98,6 +97,8 @@ export const createCoachee = async (req: Request, res: Response): Promise<void> 
         role: 'COACHEE',
         pais, telefono: `+56 ${telefono}`,
         empresa, cargo,
+        servicioContratado: servicio,
+        frecuenciaRecordatorios: frecuencia,
       }
     });
 
@@ -113,5 +114,34 @@ export const createCoachee = async (req: Request, res: Response): Promise<void> 
     });
   } catch (error) {
     res.status(500).json({ message: 'Error creando coachee' });
+  }
+};
+
+export const actualizarCoachee = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { nombre, apellido, email, pais, telefono, empresa, cargo, activo, servicioContratado, frecuenciaRecordatorios, hasDiagnostico } = req.body;
+    
+    const coacheeActualizado = await prisma.user.update({
+      where: { id },
+      data: {
+        nombre,
+        apellido,
+        email,
+        pais,
+        telefono,
+        empresa,
+        cargo,
+        activo,
+        servicioContratado,
+        frecuenciaRecordatorios,
+        hasDiagnostico
+      }
+    });
+    
+    res.json(coacheeActualizado);
+  } catch (error) {
+    console.error('Error al actualizar coachee:', error);
+    res.status(500).json({ message: 'Error interno al actualizar coachee' });
   }
 };

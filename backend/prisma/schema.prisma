@@ -36,6 +36,8 @@ model User {
   cargo             String?
   contratoFirmado   Boolean         @default(false)
   hasDiagnostico    Boolean         @default(false)
+  servicioContratado String?
+  frecuenciaRecordatorios String?
 
   coachId           String?
   coach             User?           @relation("CoachToCoachee", fields: [coachId], references: [id])

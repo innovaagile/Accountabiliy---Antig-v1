@@ -1,5 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { obtenerCoachees, obtenerCoacheePorId, createCoachee } from '../controllers/coacheeController';
+import { obtenerCoachees, obtenerCoacheePorId, createCoachee, actualizarCoachee } from '../controllers/coacheeController';
 import { protect, AuthRequest } from '../middlewares/authMiddleware';
 
 const router = Router();
@@ -15,5 +15,6 @@ const ensureAdmin = (req: AuthRequest, res: Response, next: NextFunction): void 
 router.get('/', protect, ensureAdmin, obtenerCoachees);
 router.get('/:id', protect, ensureAdmin, obtenerCoacheePorId);
 router.post('/', protect, ensureAdmin, createCoachee);
+router.put('/:id', protect, ensureAdmin, actualizarCoachee);
 
 export default router;

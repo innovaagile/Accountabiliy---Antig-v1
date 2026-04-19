@@ -13,6 +13,7 @@ const CrearCoacheeModal: React.FC<CrearCoacheeModalProps> = ({ isOpen, onClose, 
     empresa: '', cargo: '', servicio: 'Sprint Digital 4S', frecuencia: 'Cada vez que debe hacer un compromiso',
   });
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   if (!isOpen) return null;
 
@@ -23,17 +24,21 @@ const CrearCoacheeModal: React.FC<CrearCoacheeModalProps> = ({ isOpen, onClose, 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setErrorMsg('');
     
     try {
       const response = await fetch('/api/coachees', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
         body: JSON.stringify(formData)
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Error al guardar');
+        throw new Error(error.message || 'Error al guardar. Verifica los permisos.');
       }
 
       const nuevoCoacheeBackend = await response.json();
@@ -45,7 +50,7 @@ const CrearCoacheeModal: React.FC<CrearCoacheeModalProps> = ({ isOpen, onClose, 
       });
       onClose();
     } catch (error: any) {
-      alert(error.message);
+      setErrorMsg(error.message);
     } finally {
       setLoading(false);
     }
@@ -83,9 +88,12 @@ const CrearCoacheeModal: React.FC<CrearCoacheeModalProps> = ({ isOpen, onClose, 
               <div><label className="block text-sm font-medium text-gray-700 mb-1">Frecuencia de Recordatorios <span className="text-red-500">*</span></label><select required name="frecuencia" value={formData.frecuencia} onChange={handleChange} className="w-full border border-gray-300 rounded-md py-2 px-3 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none"><option value="Cada vez que debe hacer un compromiso">Cada vez que debe hacer un compromiso</option><option value="Una vez al día en la mañana">Una vez al día en la mañana</option></select></div>
             </div>
           </div>
-          <div className="flex items-center justify-end gap-3 pt-6 pb-2">
-            <button type="button" onClick={onClose} disabled={loading} className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">Cancelar</button>
-            <button type="submit" disabled={loading} className="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-lime-500 hover:bg-lime-600 disabled:opacity-50">{loading ? 'Guardando...' : 'Crear Coachee'}</button>
+          <div className="flex flex-col items-end gap-3 pt-6 pb-2">
+            {errorMsg && <div className="text-red-500 font-bold text-sm w-full text-right">{errorMsg}</div>}
+            <div className="flex gap-3">
+              <button type="button" onClick={onClose} disabled={loading} className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">Cancelar</button>
+              <button type="submit" disabled={loading} className="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-lime-500 hover:bg-lime-600 disabled:opacity-50">{loading ? 'Guardando...' : 'Crear Coachee'}</button>
+            </div>
           </div>
         </form>
       </div>
