@@ -89,14 +89,25 @@ model Ciclo {
   tareas            Tarea[]
 }
 
+enum Periodicidad {
+  DIARIA
+  SEMANAL
+  MENSUAL
+}
+
 model Tarea {
   id                String          @id @default(uuid())
   cicloId           String
   nombre            String
-  descripcion       String
-  periodicidad      String
-  horaProgramada    String
-  icono             String
+  descripcion       String?
+  momento           String?
+  accion            String?
+  periodicidad      Periodicidad    @default(DIARIA)
+  diasSemana        Json?
+  fechasMensuales   Json?
+  horaProgramada    String?
+  horaSugerida      String?
+  icono             String?         @default("CheckCircle")
   activa            Boolean         @default(true)
 
   ciclo             Ciclo           @relation(fields: [cicloId], references: [id], onDelete: Cascade)

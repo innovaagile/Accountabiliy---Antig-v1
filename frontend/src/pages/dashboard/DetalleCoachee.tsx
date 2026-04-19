@@ -1,13 +1,27 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit2, KeyRound, Trash2, PlayCircle, FileText, ChevronDown } from 'lucide-react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, Edit2, KeyRound, Trash2, PlayCircle, FileText, ChevronDown, CheckCircle, Activity, Target, Zap, Heart, Star, Book, Coffee, Bell, Award, Anchor, Briefcase } from 'lucide-react';
 import { contarDiasHabiles } from '../../utils/dateUtils';
+
+export const AVAILABLE_ICONS = [
+    { name: 'CheckCircle', icon: CheckCircle }, { name: 'Activity', icon: Activity },
+    { name: 'Target', icon: Target }, { name: 'Zap', icon: Zap },
+    { name: 'Heart', icon: Heart }, { name: 'Star', icon: Star },
+    { name: 'Book', icon: Book }, { name: 'Coffee', icon: Coffee },
+    { name: 'Bell', icon: Bell }, { name: 'Award', icon: Award },
+    { name: 'Anchor', icon: Anchor }, { name: 'Briefcase', icon: Briefcase }
+];
 
 interface Tarea {
     id: string;
     nombre: string;
+    momento?: string;
+    accion?: string;
     descripcion?: string;
-    periodicidad?: string;
+    periodicidad: string;
+    fechasMensuales?: string[];
+    diasSemana?: string[];
+    horaSugerida?: string;
     horaProgramada?: string;
     icono?: string;
     activa: boolean;
@@ -44,6 +58,7 @@ interface Coachee {
 const DetalleCoachee = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     
     const [coachee, setCoachee] = useState<Coachee | null>(null);
     const [loading, setLoading] = useState(true);
@@ -66,6 +81,8 @@ const DetalleCoachee = () => {
     // Contrato
     const [sendingContract, setSendingContract] = useState(false);
     const [contractSuccess, setContractSuccess] = useState(false);
+
+    const [showToggleModal, setShowToggleModal] = useState(false);
 
     // Modal Universal de Ciclos (Crear / Continuar / Editar)
     const [cicloModalState, setCicloModalState] = useState<{
@@ -143,6 +160,96 @@ const DetalleCoachee = () => {
         });
     };
 
+    const [tareaAEliminar, setTareaAEliminar] = useState<string | null>(null);
+    const [cicloPadreDeTarea, setCicloPadreDeTarea] = useState<string | null>(null);
+    const [processingTarea, setProcessingTarea] = useState(false);
+    
+    const [tareaModalState, setTareaModalState] = useState<{
+        isOpen: boolean;
+        mode: 'CREATE' | 'EDIT';
+        cicloId: string;
+        limitesCiclo: { inicio: string, fin: string };
+        data: Partial<Tarea>;
+    }>({
+        isOpen: false,
+        mode: 'CREATE',
+        cicloId: '',
+        limitesCiclo: { inicio: '', fin: '' },
+        data: {
+            nombre: '', momento: '', accion: '', periodicidad: 'DIARIA',
+            diasSemana: [], fechasMensuales: [], horaSugerida: '', horaProgramada: '', icono: 'CheckCircle'
+        }
+    });
+
+    const openTareaModal = (mode: 'CREATE' | 'EDIT', ciclo: Ciclo, tareaToEdit?: Tarea) => {
+        setTareaModalState({
+            isOpen: true,
+            mode,
+            cicloId: ciclo.id,
+            limitesCiclo: { inicio: new Date(ciclo.fechaInicio).toISOString().split('T')[0], fin: new Date(ciclo.fechaFin).toISOString().split('T')[0] },
+            data: mode === 'EDIT' && tareaToEdit ? { ...tareaToEdit } : {
+                nombre: '', momento: '', accion: '', periodicidad: 'DIARIA',
+                diasSemana: [], fechasMensuales: [], horaSugerida: '', horaProgramada: '', icono: 'CheckCircle'
+            }
+        });
+    };
+
+    const handleDeleteTarea = async () => {
+        if (!tareaAEliminar || !cicloPadreDeTarea) return;
+        setProcessingTarea(true);
+        try {
+            const res = await fetch(`/api/coachees/${id}/ciclos/${cicloPadreDeTarea}/tareas/${tareaAEliminar}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            });
+            if (res.ok) {
+                setTareaAEliminar(null);
+                setCicloPadreDeTarea(null);
+                await fetchCoachee();
+            }
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setProcessingTarea(false);
+        }
+    };
+
+    const handleSaveTareaModal = async () => {
+        setProcessingTarea(true);
+        try {
+            const endpoint = tareaModalState.mode === 'EDIT' 
+                ? `/api/coachees/${id}/ciclos/${tareaModalState.cicloId}/tareas/${tareaModalState.data.id}`
+                : `/api/coachees/${id}/ciclos/${tareaModalState.cicloId}/tareas`;
+            const method = tareaModalState.mode === 'EDIT' ? 'PUT' : 'POST';
+
+            const payloadData = {
+                ...tareaModalState.data,
+                // Normalizing dates for timezone matching
+                fechasMensuales: tareaModalState.data.periodicidad === 'MENSUAL' && tareaModalState.data.fechasMensuales?.length
+                    ? tareaModalState.data.fechasMensuales.map(f => new Date(f).toISOString())
+                    : undefined
+            };
+
+            const res = await fetch(endpoint, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify(payloadData)
+            });
+
+            if (res.ok) {
+                setTareaModalState({ ...tareaModalState, isOpen: false });
+                await fetchCoachee();
+            }
+        } catch (error) {
+            console.error('Error al guardar tarea', error);
+        } finally {
+            setProcessingTarea(false);
+        }
+    };
+
     const handleSaveCicloModal = async () => {
         setProcessingCiclo(true);
         try {
@@ -216,7 +323,7 @@ const DetalleCoachee = () => {
                     cargo: data.cargo || '',
                     servicioContratado: servicioReal,
                     frecuenciaRecordatorios: data.frecuenciaRecordatorios || 'Cada vez que debe hacer un compromiso',
-                    diagnosticoRealizado: data.hasDiagnostico || false,
+                    hasDiagnostico: data.hasDiagnostico || false,
                     activo: data.activo
                 });
             }
@@ -245,7 +352,7 @@ const DetalleCoachee = () => {
                 activo: editData.activo,
                 servicioContratado: editData.servicioContratado,
                 frecuenciaRecordatorios: editData.frecuenciaRecordatorios,
-                hasDiagnostico: editData.diagnosticoRealizado
+                hasDiagnostico: editData.hasDiagnostico
             };
 
             const res = await fetch(`/api/coachees/${id}`, {
@@ -338,7 +445,40 @@ const DetalleCoachee = () => {
         }
     };
 
+    const handleToggleModalOpen = () => setShowToggleModal(true);
 
+    const handleToggleEstadoConfirm = async () => {
+        if (!coachee) return;
+        
+        try {
+            const res = await fetch(`/api/coachees/${id}/toggle-estado`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+
+            if (res.ok) {
+                setShowToggleModal(false);
+                await fetchCoachee();
+            } else {
+                console.error("Error al actualizar estado");
+            }
+        } catch (err) {
+            console.error("Error en conexión:", err);
+        }
+    };
+
+    useEffect(() => {
+        if (coachee && searchParams.get('action') === 'new-task') {
+            const activeCycle = coachee.ciclos?.find((c:any) => c.activo === true);
+            if (activeCycle) {
+                setTimeout(() => openTareaModal('CREATE', activeCycle), 100);
+            }
+            searchParams.delete('action');
+            setSearchParams(searchParams, { replace: true });
+        }
+    }, [coachee, searchParams]);
 
     if (loading || !coachee) return (
         <div className="min-h-screen flex items-center justify-center p-10 font-black text-[#1B254B]">
@@ -382,15 +522,13 @@ const DetalleCoachee = () => {
                     </h1>
                     
                     <label className="flex items-center gap-2 cursor-pointer bg-white px-3 py-1.5 rounded-full shadow-sm border border-gray-100 transition-colors">
-                        <span className={`text-xs font-black ${editData.activo ? 'text-[#1B254B]' : 'text-gray-400'}`}>
-                            {editData.activo ? 'ACTIVO' : 'INACTIVO'}
+                        <span className={`text-xs font-black ${coachee.activo ? 'text-[#1B254B]' : 'text-gray-400'}`}>
+                            {coachee.activo ? 'ACTIVO' : 'INACTIVO'}
                         </span>
-                        <div className={`w-10 h-5 flex items-center rounded-full p-1 transition-colors ${editData.activo ? 'bg-[#A9D42C]' : 'bg-gray-300'}`}>
-                            <div className={`bg-white w-3 h-3 rounded-full shadow-md transform transition-transform ${editData.activo ? 'translate-x-5' : 'translate-x-0'}`} />
+                        <div className={`w-10 h-5 flex items-center rounded-full p-1 transition-colors ${coachee.activo ? 'bg-[#A9D42C]' : 'bg-gray-300'}`}>
+                            <div className={`bg-white w-3 h-3 rounded-full shadow-md transform transition-transform ${coachee.activo ? 'translate-x-5' : 'translate-x-0'}`} />
                         </div>
-                        <input type="checkbox" className="hidden" checked={editData.activo} onChange={(e) => {
-                            if(isEditing) setEditData({...editData, activo: e.target.checked})
-                        }} disabled={!isEditing} />
+                        <input type="checkbox" className="hidden" checked={coachee.activo} onChange={handleToggleModalOpen} />
                     </label>
 
                     <span className="px-4 py-1.5 bg-[#F4F7FE] text-[#1B254B] text-sm font-black rounded-full border border-gray-200 uppercase tracking-widest">
@@ -416,11 +554,11 @@ const DetalleCoachee = () => {
                 {!isEditing ? (
                     <div className="grid grid-cols-2 gap-6">
                         <InfoField label="Nombre Completo" value={`${coachee.nombre} ${coachee.apellido}`} />
-                        <InfoField label="Correo Electrónico" value={coachee.email} />
-                        <InfoField label="País / Región" value={coachee.pais} />
-                        <InfoField label="Teléfono de Contacto" value={coachee.telefono} />
-                        <InfoField label="Empresa" value={coachee.empresa} />
-                        <InfoField label="Cargo Actual" value={coachee.cargo} />
+                        <InfoField label="Correo Electrónico" value={coachee.email || ''} />
+                        <InfoField label="País / Región" value={coachee.pais || ''} />
+                        <InfoField label="Teléfono de Contacto" value={coachee.telefono || ''} />
+                        <InfoField label="Empresa" value={coachee.empresa || ''} />
+                        <InfoField label="Cargo Actual" value={coachee.cargo || ''} />
                         <InfoField label="Servicio Contratado" value={coachee.servicioContratado || 'Sin Plan'} />
                         <InfoField label="Frecuencia Recordatorios" value={coachee?.frecuenciaRecordatorios || 'No especificada'} />
                         <InfoField label="Diagnóstico Inicial" value={coachee.hasDiagnostico ? 'REALIZADO' : 'PENDIENTE'} />
@@ -428,13 +566,13 @@ const DetalleCoachee = () => {
                 ) : (
                     <div className="space-y-6">
                         <div className="grid grid-cols-2 gap-6">
-                            <EditField label="Nombre" value={editData.nombre} onChange={(v:any) => setEditData({...editData, nombre: v})} />
-                            <EditField label="Apellido" value={editData.apellido} onChange={(v:any) => setEditData({...editData, apellido: v})} />
-                            <EditField label="Correo Electrónico" value={editData.email} onChange={(v:any) => setEditData({...editData, email: v})} />
-                            <EditField label="País / Región" value={editData.pais} onChange={(v:any) => setEditData({...editData, pais: v})} />
-                            <EditField label="Teléfono" value={editData.telefono} onChange={(v:any) => setEditData({...editData, telefono: v})} />
-                            <EditField label="Empresa" value={editData.empresa} onChange={(v:any) => setEditData({...editData, empresa: v})} />
-                            <EditField label="Cargo" value={editData.cargo} onChange={(v:any) => setEditData({...editData, cargo: v})} />
+                            <EditField label="Nombre" value={editData.nombre || ''} onChange={(v:any) => setEditData({...editData, nombre: v})} />
+                            <EditField label="Apellido" value={editData.apellido || ''} onChange={(v:any) => setEditData({...editData, apellido: v})} />
+                            <EditField label="Correo Electrónico" value={editData.email || ''} onChange={(v:any) => setEditData({...editData, email: v})} />
+                            <EditField label="País / Región" value={editData.pais || ''} onChange={(v:any) => setEditData({...editData, pais: v})} />
+                            <EditField label="Teléfono" value={editData.telefono || ''} onChange={(v:any) => setEditData({...editData, telefono: v})} />
+                            <EditField label="Empresa" value={editData.empresa || ''} onChange={(v:any) => setEditData({...editData, empresa: v})} />
+                            <EditField label="Cargo" value={editData.cargo || ''} onChange={(v:any) => setEditData({...editData, cargo: v})} />
                         </div>
                         
                         <div className="grid grid-cols-2 gap-6 pt-4 border-t border-gray-100">
@@ -467,15 +605,15 @@ const DetalleCoachee = () => {
                         </div>
 
                         <label className="flex items-center gap-4 p-4 rounded-xl bg-[#F4F7FE] cursor-pointer w-full md:w-1/2">
-                            <div className={`w-6 h-6 rounded-md flex items-center justify-center ${editData.diagnosticoRealizado ? 'bg-[#A9D42C]' : 'bg-gray-300'}`}>
-                                {editData.diagnosticoRealizado && <span className="text-white text-sm font-black">✓</span>}
+                            <div className={`w-6 h-6 rounded-md flex items-center justify-center ${editData.hasDiagnostico ? 'bg-[#A9D42C]' : 'bg-gray-300'}`}>
+                                {editData.hasDiagnostico && <span className="text-white text-sm font-black">✓</span>}
                             </div>
                             <span className="text-sm font-bold text-[#1B254B]">Sesión de Diagnóstico Realizada</span>
                             <input 
                                 type="checkbox" 
                                 className="hidden" 
-                                checked={editData.diagnosticoRealizado}
-                                onChange={(e) => setEditData({...editData, diagnosticoRealizado: e.target.checked})}
+                                checked={editData.hasDiagnostico}
+                                onChange={(e) => setEditData({...editData, hasDiagnostico: e.target.checked})}
                             />
                         </label>
 
@@ -506,7 +644,7 @@ const DetalleCoachee = () => {
             )}
             
             {contractSuccess && (
-                <div className="absolute top-24 left-1/2 -translate-x-1/2 z-40 bg-blue-500 text-white px-8 py-3 rounded-xl font-bold shadow-lg animate-bounce">
+                <div className="absolute top-24 left-1/2 -translate-x-1/2 z-40 bg-[#A9D42C] text-white px-8 py-3 rounded-xl font-bold shadow-lg animate-bounce">
                     Contrato enviado con éxito al correo del coachee
                 </div>
             )}
@@ -533,7 +671,7 @@ const DetalleCoachee = () => {
                 </button>
                 <button 
                     onClick={() => openCicloModal('CONTINUE')}
-                    className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-sm"
+                    className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-[#A9D42C] hover:bg-[#8eb825] text-white rounded-xl font-bold shadow-sm"
                 >
                     <PlayCircle className="w-5 h-5" /> Continuar Ciclo
                 </button>
@@ -596,7 +734,7 @@ const DetalleCoachee = () => {
                             return (
                                 <div key={ciclo.id} className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm transition-all duration-300">
                                     <div 
-                                        className={`px-6 py-4 flex justify-between items-center cursor-pointer select-none transition-colors ${isExpanded ? 'bg-[#F4F7FE]' : 'bg-white hover:bg-gray-50'}`}
+                                        className={`px-6 py-4 flex justify-between items-center cursor-pointer select-none transition-colors ${isExpanded ? 'bg-[#F4F6F0]' : 'bg-[#F4F6F0] hover:bg-gray-50'}`}
                                         onClick={() => toggleCiclo(ciclo.id)}
                                     >
                                         <div className="flex items-center gap-4">
@@ -623,7 +761,7 @@ const DetalleCoachee = () => {
                                         
                                         <div className="flex items-center gap-6">
                                             <span className="text-sm font-bold text-gray-500 bg-white px-3 py-1.5 rounded-lg border border-gray-100 shadow-sm">
-                                                Tareas ({tareasCompletadas}/{tareasTotal})
+                                                Tareas ({ciclo.tareas?.length || 0}/5)
                                             </span>
                                             <button 
                                                 onClick={(e) => { e.stopPropagation(); setCicloAEliminar(ciclo.id); }}
@@ -638,20 +776,39 @@ const DetalleCoachee = () => {
                                         <div className="p-6 border-t border-gray-100 bg-white">
                                             <div className="flex justify-between items-end mb-4">
                                                 <h4 className="font-bold text-gray-400 uppercase tracking-widest text-xs">Progreso</h4>
-                                                <button 
-                                                    onClick={() => openCicloModal('EDIT', ciclo, `Ciclo ${cicloNumeration}`)}
-                                                    className="flex items-center gap-2 text-[12px] font-bold text-gray-400 hover:text-blue-500 transition-colors"
-                                                >
-                                                    <Edit2 className="w-4 h-4" /> Editar Ciclo
-                                                </button>
+                                                <div className="flex gap-4">
+                                                    {isActivo && (
+                                                        <button 
+                                                            onClick={() => openTareaModal('CREATE', ciclo)}
+                                                            className="flex items-center gap-2 text-[12px] font-bold text-[#A9D42C] hover:text-[#8eb825] transition-colors"
+                                                        >
+                                                            + Agregar Tarea
+                                                        </button>
+                                                    )}
+                                                    <button 
+                                                        onClick={() => openCicloModal('EDIT', ciclo, `Ciclo ${cicloNumeration}`)}
+                                                        className="flex items-center gap-2 text-[12px] font-bold text-gray-400 hover:text-[#A9D42C] transition-colors"
+                                                    >
+                                                        <Edit2 className="w-4 h-4" /> Editar Ciclo
+                                                    </button>
+                                                </div>
                                             </div>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="flex flex-col gap-4">
                                                 {ciclo.tareas && ciclo.tareas.map((tarea: Tarea) => (
-                                                    <TaskItem key={tarea.id} label={tarea.nombre} completed={!tarea.activa} />
+                                                    <TaskItem 
+                                                        key={tarea.id} 
+                                                        tarea={tarea} 
+                                                        onEdit={() => openTareaModal('EDIT', ciclo, tarea)} 
+                                                        onDelete={() => {
+                                                            setTareaAEliminar(tarea.id);
+                                                            setCicloPadreDeTarea(ciclo.id);
+                                                        }} 
+                                                        isActivo={isActivo} 
+                                                    />
                                                 ))}
                                                 {(!ciclo.tareas || ciclo.tareas.length === 0) && (
                                                     <div className="col-span-2 text-sm text-gray-400 font-bold py-6 border-2 border-dashed border-gray-200 rounded-xl text-center">
-                                                        No hay tareas configuradas para este ciclo. Usa "Continuar Ciclo" para administrarlas.
+                                                        No hay tareas configuradas para este ciclo. Usa "+ Agregar Tarea" para crearlas.
                                                     </div>
                                                 )}
                                             </div>
@@ -791,7 +948,7 @@ const DetalleCoachee = () => {
                             )}
                             
                             {cicloModalState.mode === 'CONTINUE' && (
-                                <p className="text-[10px] text-blue-500 font-bold leading-relaxed pt-2 bg-blue-50 p-3 rounded-lg border border-blue-100">
+                                <p className="text-[10px] text-gray-500 font-bold leading-relaxed pt-2 bg-gray-50 p-3 rounded-lg border border-gray-200">
                                     💡 Se clonará la estructura de tareas del ciclo anterior dejándolas pendiente de cumplimiento. El ciclo previo pasará a estado COMPLETADO.
                                 </p>
                             )}
@@ -849,6 +1006,286 @@ const DetalleCoachee = () => {
                     </div>
                 </div>
             )}
+
+            {/* MODAL DE TAREAS (Soft UI) */}
+            {tareaModalState.isOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md p-4 overflow-y-auto">
+                    <div className="bg-white rounded-[24px] w-full max-w-2xl p-10 shadow-[14px_17px_40px_4px_rgba(112,144,176,0.08)] my-8">
+                        <h2 className="text-3xl font-black text-[#1B254B] mb-8 font-['Plus_Jakarta_Sans',_sans-serif] tracking-tight">
+                            {tareaModalState.mode === 'CREATE' ? 'Nuevo Compromiso' : 'Editar Compromiso'}
+                        </h2>
+                        
+                        <div className="space-y-6 mb-10">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label className="text-[12px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Nombre de la Tarea <span className="text-red-500">*</span></label>
+                                    <input 
+                                        type="text" 
+                                        className="w-full px-5 py-4 rounded-xl border-none bg-[#F4F7FE] focus:ring-2 focus:ring-[#A9D42C] outline-none text-sm font-bold text-[#1B254B] transition-all"
+                                        value={tareaModalState.data.nombre || ''}
+                                        onChange={e => setTareaModalState(s => ({...s, data: {...s.data, nombre: e.target.value}}))}
+                                        placeholder="Ej. Realizar seguimiento"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[12px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Acción (Opcional)</label>
+                                    <input 
+                                        type="text" 
+                                        className="w-full px-5 py-4 rounded-xl border-none bg-[#F4F7FE] focus:ring-2 focus:ring-[#A9D42C] outline-none text-sm font-bold text-[#1B254B] transition-all"
+                                        value={tareaModalState.data.accion || ''}
+                                        onChange={e => setTareaModalState(s => ({...s, data: {...s.data, accion: e.target.value}}))}
+                                        placeholder="Verbo o meta"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-[12px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Descripción</label>
+                                <textarea 
+                                    className="w-full px-5 py-4 rounded-xl border-none bg-[#F4F7FE] focus:ring-2 focus:ring-[#A9D42C] outline-none text-sm font-bold text-[#1B254B] min-h-[100px] resize-none transition-all"
+                                    value={tareaModalState.data.descripcion || ''}
+                                    onChange={e => setTareaModalState(s => ({...s, data: {...s.data, descripcion: e.target.value}}))}
+                                    placeholder="Contexto o detalles extensos para esta tarea..."
+                                />
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label className="text-[12px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Periodicidad</label>
+                                    <select 
+                                        className="w-full px-5 py-4 rounded-xl border-none bg-[#F4F7FE] focus:ring-2 focus:ring-[#A9D42C] outline-none text-sm font-bold text-[#1B254B] appearance-none cursor-pointer"
+                                        value={tareaModalState.data.periodicidad}
+                                        onChange={e => setTareaModalState(s => ({...s, data: {...s.data, periodicidad: e.target.value as any}}))}
+                                    >
+                                        <option value="DIARIA">Diaria</option>
+                                        <option value="SEMANAL">Semanal</option>
+                                        <option value="MENSUAL">Mensual (Eventos Específicos)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="text-[12px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Hora Sugerida</label>
+                                    <select 
+                                        className="w-full px-5 py-4 rounded-xl border-none bg-[#F4F7FE] focus:ring-2 focus:ring-[#A9D42C] outline-none text-sm font-bold text-[#1B254B] appearance-none cursor-pointer"
+                                        value={tareaModalState.data.horaProgramada || '09:00'}
+                                        onChange={e => setTareaModalState(s => ({...s, data: {...s.data, horaProgramada: e.target.value}}))}
+                                    >
+                                        {Array.from({length: 24 * 4}).map((_, i) => {
+                                            const hr = Math.floor(i / 4).toString().padStart(2, '0');
+                                            const min = ((i % 4) * 15).toString().padStart(2, '0');
+                                            const val = `${hr}:${min}`;
+                                            return <option key={val} value={val}>{val}</option>;
+                                        })}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-[12px] font-black text-gray-400 uppercase tracking-widest mb-3 block">Selector de Íconos (Refuerzo Visual)</label>
+                                <div className="grid grid-cols-6 gap-3 bg-[#F4F7FE] p-4 rounded-[20px] border border-gray-100">
+                                    {AVAILABLE_ICONS.map(i => {
+                                        const Icon = i.icon;
+                                        const isSelected = tareaModalState.data.icono === i.name;
+                                        return (
+                                            <button 
+                                                key={i.name} 
+                                                onClick={() => setTareaModalState(s => ({...s, data: {...s.data, icono: i.name}}))} 
+                                                className={`flex items-center justify-center p-3 rounded-xl transition-all duration-300 ${isSelected ? 'bg-[#A9D42C] text-white shadow-md scale-105' : 'bg-white text-gray-400 hover:text-[#1B254B] hover:shadow-sm'}`}
+                                            >
+                                                <Icon className="w-6 h-6" />
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* SELECTOR SEMANAL */}
+                            {tareaModalState.data.periodicidad === 'SEMANAL' && (
+                                <div className="p-5 bg-gray-50 border border-gray-100 rounded-[20px]">
+                                    <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-3 block">Días de la semana</label>
+                                    <div className="flex gap-2 flex-wrap">
+                                        {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map(dia => {
+                                            const isSelected = (tareaModalState.data.diasSemana || []).includes(dia);
+                                            return (
+                                                <button
+                                                    key={dia}
+                                                    onClick={() => {
+                                                        const current = [...(tareaModalState.data.diasSemana || [])];
+                                                        if (isSelected) current.splice(current.indexOf(dia), 1);
+                                                        else current.push(dia);
+                                                        setTareaModalState(s => ({...s, data: {...s.data, diasSemana: current}}));
+                                                    }}
+                                                    className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${isSelected ? 'bg-[#A9D42C] text-white shadow-md' : 'bg-white text-gray-400 hover:bg-gray-100'}`}
+                                                >
+                                                    {dia.substring(0,3)}
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* SELECTOR MENSUAL */}
+                            {tareaModalState.data.periodicidad === 'MENSUAL' && (
+                                <div className="p-5 bg-gray-50 border border-gray-100 rounded-[20px]">
+                                    <div className="flex justify-between items-center mb-3">
+                                        <label className="text-[11px] font-black text-gray-400 uppercase tracking-widest block">Fechas Específicas (Máximo 3)</label>
+                                        <button 
+                                            disabled={(tareaModalState.data.fechasMensuales || []).length >= 3}
+                                            onClick={() => setTareaModalState(s => ({...s, data: {...s.data, fechasMensuales: [...(s.data.fechasMensuales || []), '']}}))}
+                                            className="text-xs font-bold text-[#A9D42C] hover:text-[#8eb825] disabled:opacity-50"
+                                        >
+                                            + Añadir Fecha
+                                        </button>
+                                    </div>
+                                    <div className="space-y-3">
+                                        {(tareaModalState.data.fechasMensuales || []).map((fecha, idx) => (
+                                            <div key={idx} className="flex gap-3 items-center">
+                                                <input 
+                                                    type="date" 
+                                                    min={tareaModalState.limitesCiclo.inicio}
+                                                    max={tareaModalState.limitesCiclo.fin}
+                                                    className="flex-1 px-4 py-3 rounded-xl border-none bg-white focus:ring-2 focus:ring-[#A9D42C] outline-none text-sm font-bold text-[#1B254B] shadow-sm"
+                                                    value={fecha ? fecha.split('T')[0] : ''}
+                                                    onChange={e => {
+                                                        const current = [...(tareaModalState.data.fechasMensuales || [])];
+                                                        const currentT = fecha.includes('T') ? fecha.split('T')[1] : '09:00';
+                                                        current[idx] = `${e.target.value}T${currentT}`;
+                                                        setTareaModalState(s => ({...s, data: {...s.data, fechasMensuales: current}}));
+                                                    }}
+                                                />
+                                                <div className="flex gap-1 w-[100px]">
+                                                    <select 
+                                                        className="px-2 py-3 rounded-xl border-none bg-white focus:ring-2 focus:ring-[#A9D42C] outline-none text-sm font-bold text-[#1B254B] w-full shadow-sm"
+                                                        value={fecha.includes('T') ? fecha.split('T')[1].split(':')[0] : '09'}
+                                                        onChange={e => {
+                                                            const current = [...(tareaModalState.data.fechasMensuales || [])];
+                                                            const d = fecha.split('T')[0] || tareaModalState.limitesCiclo.inicio;
+                                                            const m = fecha.includes('T') ? fecha.split('T')[1].split(':')[1] : '00';
+                                                            current[idx] = `${d}T${e.target.value}:${m}`;
+                                                            setTareaModalState(s => ({...s, data: {...s.data, fechasMensuales: current}}));
+                                                        }}
+                                                    >
+                                                        {Array.from({length: 24}).map((_, i) => {
+                                                            const h = i.toString().padStart(2, '0');
+                                                            return <option key={h} value={h}>{h}</option>;
+                                                        })}
+                                                    </select>
+                                                    <span className="self-center font-bold text-gray-400">:</span>
+                                                    <select 
+                                                        className="px-2 py-3 rounded-xl border-none bg-white focus:ring-2 focus:ring-[#A9D42C] outline-none text-sm font-bold text-[#1B254B] w-full shadow-sm"
+                                                        value={fecha.includes('T') ? fecha.split('T')[1].split(':')[1] : '00'}
+                                                        onChange={e => {
+                                                            const current = [...(tareaModalState.data.fechasMensuales || [])];
+                                                            const d = fecha.split('T')[0] || tareaModalState.limitesCiclo.inicio;
+                                                            const h = fecha.includes('T') ? fecha.split('T')[1].split(':')[0] : '09';
+                                                            current[idx] = `${d}T${h}:${e.target.value}`;
+                                                            setTareaModalState(s => ({...s, data: {...s.data, fechasMensuales: current}}));
+                                                        }}
+                                                    >
+                                                        {['00', '15', '30', '45'].map(m => <option key={m} value={m}>{m}</option>)}
+                                                    </select>
+                                                </div>
+                                                <button 
+                                                    onClick={() => {
+                                                        const current = [...(tareaModalState.data.fechasMensuales || [])];
+                                                        current.splice(idx, 1);
+                                                        setTareaModalState(s => ({...s, data: {...s.data, fechasMensuales: current}}));
+                                                    }}
+                                                    className="p-3 text-gray-400 hover:text-red-500 transition-colors bg-white rounded-xl shadow-sm"
+                                                >
+                                                    <Trash2 className="w-5 h-5" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                        {!(tareaModalState.data.fechasMensuales?.length) && <p className="text-xs text-gray-400 font-bold">No hay fechas configuradas.</p>}
+                                    </div>
+                                </div>
+                            )}
+
+                        </div>
+
+                        <div className="flex w-full gap-4">
+                            <button 
+                                onClick={() => setTareaModalState({ ...tareaModalState, isOpen: false })}
+                                disabled={processingTarea}
+                                className="flex-1 py-4 px-6 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                            <button 
+                                onClick={handleSaveTareaModal}
+                                disabled={processingTarea || !tareaModalState.data.nombre}
+                                className="flex-1 py-4 px-6 rounded-xl bg-[#A9D42C] hover:bg-[#8eb825] text-white font-bold transition-colors shadow-lg shadow-green-200 disabled:opacity-50"
+                            >
+                                {processingTarea ? 'Guardando...' : 'Guardar Cambios'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL DE ELIMINACIÓN DE TAREA (Soft UI) */}
+            {tareaAEliminar && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md p-4">
+                    <div className="bg-white rounded-2xl w-full max-w-md p-8 shadow-[14px_17px_40px_4px_rgba(112,144,176,0.08)] flex flex-col items-center text-center">
+                        <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-6 border-4 border-white shadow-sm">
+                            <Trash2 className="w-8 h-8 text-red-500" />
+                        </div>
+                        <h2 className="text-2xl font-black text-[#1B254B] mb-4 font-['Plus_Jakarta_Sans',_sans-serif]">
+                            Borrar Tarea
+                        </h2>
+                        <p className="text-gray-500 font-bold mb-8 leading-relaxed">
+                            ¿Eliminar esta tarea y su historial de cumplimiento?
+                        </p>
+                        <div className="flex w-full gap-4">
+                            <button 
+                                onClick={() => { setTareaAEliminar(null); setCicloPadreDeTarea(null); }}
+                                disabled={processingTarea}
+                                className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-500 font-bold transition-colors shadow-sm"
+                            >
+                                Cancelar
+                            </button>
+                            <button 
+                                onClick={handleDeleteTarea}
+                                disabled={processingTarea}
+                                className="flex-1 py-3 px-4 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold transition-colors shadow-md"
+                            >
+                                {processingTarea ? 'Borrando...' : 'Sí, ELIMINAR'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* MODAL DE CAMBIO DE ESTADO (Soft UI) */}
+            {showToggleModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md p-4">
+                    <div className="bg-white rounded-[24px] w-full max-w-md p-8 shadow-[14px_17px_40px_4px_rgba(112,144,176,0.08)] flex flex-col items-center text-center">
+                        <div className="w-16 h-16 bg-[#F4F7FE] rounded-[20px] flex items-center justify-center mb-6">
+                            <Activity className="w-8 h-8 text-[#1B254B]" />
+                        </div>
+                        <h2 className="text-2xl font-black text-[#1B254B] mb-4">¿Cambiar estado del usuario?</h2>
+                        <p className="text-sm text-gray-500 font-bold mb-8">
+                            {coachee?.activo 
+                                ? "Al desactivarlo perderá el acceso y se cerrará su ciclo actual." 
+                                : "Al activarlo se restaurará su ciclo más reciente."}
+                        </p>
+                        <div className="flex w-full gap-4">
+                            <button 
+                                onClick={() => setShowToggleModal(false)}
+                                className="flex-1 py-4 border-2 border-gray-100 rounded-xl bg-white hover:bg-gray-50 text-gray-400 font-bold transition-all shadow-sm"
+                            >
+                                Cancelar
+                            </button>
+                            <button 
+                                onClick={handleToggleEstadoConfirm}
+                                className={`flex-1 py-4 rounded-xl font-bold transition-all shadow-lg text-white ${coachee?.activo ? 'bg-red-500 hover:bg-red-600 shadow-red-200' : 'bg-[#A9D42C] hover:bg-[#8eb825] shadow-green-200'}`}
+                            >
+                                Aceptar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -871,14 +1308,56 @@ const EditField = ({ label, value, onChange }: { label: string, value: string, o
         />
     </div>
 );
+const TaskItem = ({ tarea, onEdit, onDelete, isActivo }: { tarea: Tarea, onEdit: () => void, onDelete: () => void, isActivo: boolean }) => {
+    const IconComponent = AVAILABLE_ICONS.find(i => i.name === tarea.icono)?.icon || CheckCircle;
+    
+    let infoDias = '';
+    if (tarea.periodicidad === 'SEMANAL' && tarea.diasSemana?.length) {
+        infoDias = tarea.diasSemana.map(d => d.substring(0,3)).join(', ');
+    } else if (tarea.periodicidad === 'MENSUAL' && tarea.fechasMensuales?.length) {
+        infoDias = `${tarea.fechasMensuales.length} fechas`;
+    } else if (tarea.periodicidad === 'DIARIA') {
+        infoDias = 'L-D';
+    } else {
+        infoDias = tarea.periodicidad;
+    }
+    
+    const hora = tarea.horaProgramada || tarea.horaSugerida || '--:--';
 
-const TaskItem = ({ label, completed }: { label: string, completed: boolean }) => (
-    <div className="flex items-center gap-3 p-3 rounded-xl bg-[#F4F7FE]">
-        <div className={`w-5 h-5 rounded-full flex flex-shrink-0 items-center justify-center text-[10px] font-black ${completed ? 'bg-[#A9D42C] text-white' : 'bg-gray-300 text-transparent'}`}>
-            ✓
+    return (
+        <div className="flex justify-between items-center bg-white p-5 rounded-2xl border border-gray-100 shadow-[14px_17px_40px_4px_rgba(112,144,176,0.08)] hover:shadow-lg transition-all group">
+            <div className="flex items-center gap-4 flex-1 min-w-0">
+                <div className={`w-12 h-12 rounded-2xl flex flex-shrink-0 items-center justify-center shadow-sm ${!tarea.activa ? 'bg-[#A9D42C] text-white' : 'bg-[#F4F7FE] text-[#1B254B]'}`}>
+                    <IconComponent className="w-6 h-6" />
+                </div>
+                <div className="flex-1 min-w-0 pr-4">
+                   <div className="flex items-center gap-2 mb-1">
+                       <span className={`text-lg font-black block leading-tight truncate ${!tarea.activa ? 'text-gray-400 line-through' : 'text-[#1B254B]'}`}>
+                           {tarea.nombre} {tarea.accion ? `- ${tarea.accion}` : ''}
+                       </span>
+                   </div>
+                   {tarea.descripcion && (
+                       <p className="text-sm text-gray-500 font-medium mb-2 line-clamp-1">
+                           {tarea.descripcion}
+                       </p>
+                   )}
+                   <p className="text-[11px] text-gray-400 font-bold uppercase tracking-wider flex items-center gap-2">
+                       <span className="bg-gray-100 px-2 py-0.5 rounded-md text-gray-500">{tarea.periodicidad}</span>
+                       <span>|</span>
+                       <span>{infoDias}</span>
+                       <span>|</span>
+                       <span className="text-[#A9D42C]">{hora}</span>
+                   </p>
+                </div>
+            </div>
+            {isActivo && (
+                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity ml-4">
+                    <button onClick={onEdit} className="p-2 text-gray-300 hover:text-[#A9D42C] hover:bg-green-50 rounded-xl transition-colors"><Edit2 className="w-5 h-5"/></button>
+                    <button onClick={onDelete} className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors"><Trash2 className="w-5 h-5"/></button>
+                </div>
+            )}
         </div>
-        <span className={`text-sm font-bold ${completed ? 'text-gray-400 line-through' : 'text-[#1B254B]'}`}>{label}</span>
-    </div>
-);
+    );
+};
 
 export default DetalleCoachee;

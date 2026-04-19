@@ -399,3 +399,44 @@ export const continuarCiclo = async (req: Request, res: Response): Promise<void>
     res.status(500).json({ message: 'Error interno del servidor al continuar el ciclo' });
   }
 };
+
+export const toggleEstadoCoachee = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const usuario = await prisma.user.findUnique({ where: { id } });
+    if (!usuario) {
+      res.status(404).json({ message: 'Usuario no encontrado' });
+      return;
+    }
+
+    const nuevoEstado = !usuario.activo;
+
+    await prisma.user.update({
+      where: { id },
+      data: { activo: nuevoEstado }
+    });
+
+    if (!nuevoEstado) {
+      await prisma.ciclo.updateMany({
+        where: { userId: id, activo: true },
+        data: { activo: false }
+      });
+    } else {
+      const ultimoCiclo = await prisma.ciclo.findFirst({
+        where: { userId: id },
+        orderBy: { id: 'desc' }
+      });
+      if (ultimoCiclo) {
+        await prisma.ciclo.update({
+          where: { id: ultimoCiclo.id },
+          data: { activo: true }
+        });
+      }
+    }
+
+    res.json({ message: `Estado actualizado a ${nuevoEstado ? 'Activo' : 'Inactivo'}`, activo: nuevoEstado });
+  } catch (error) {
+    console.error('Error al hacer toggle de estado:', error);
+    res.status(500).json({ message: 'Error interno del servidor' });
+  }
+};
