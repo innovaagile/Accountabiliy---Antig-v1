@@ -76,6 +76,7 @@ model Ciclo {
   id                String          @id @default(uuid())
   userId            String
   nombre            String?
+  activo            Boolean         @default(true)
   fechaInicio       DateTime
   fechaFin          DateTime
   producto          String          @default("SPRINT_4S")

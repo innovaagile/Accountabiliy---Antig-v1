@@ -27,27 +27,27 @@ const DetalleCoachee = () => {
     const [sendingContract, setSendingContract] = useState(false);
     const [contractSuccess, setContractSuccess] = useState(false);
 
-    // Modal de Nuevo Ciclo
-    const [isNewCicloModalOpen, setIsNewCicloModalOpen] = useState(false);
-    const [generatingCiclo, setGeneratingCiclo] = useState(false);
-    const [cicloSuccess, setCicloSuccess] = useState(false);
-    const [newCicloData, setNewCicloData] = useState({
-        nombre: 'Ciclo 1',
-        fechaInicio: new Date().toISOString().split('T')[0]
+    // Modal Universal de Ciclos (Crear / Continuar / Editar)
+    const [cicloModalState, setCicloModalState] = useState<{
+        isOpen: boolean;
+        mode: 'CREATE' | 'CONTINUE' | 'EDIT';
+        data: {
+            id?: string;
+            nombre: string;
+            fechaInicio: string;
+            fechaFin: string;
+        }
+    }>({
+        isOpen: false,
+        mode: 'CREATE',
+        data: { nombre: '', fechaInicio: '', fechaFin: '' }
     });
-
-    // Editar Ciclo
-    const [isEditCicloModalOpen, setIsEditCicloModalOpen] = useState(false);
-    const [updatingCiclo, setUpdatingCiclo] = useState(false);
-    const [updateCicloSuccess, setUpdateCicloSuccess] = useState(false);
-    const [editCicloData, setEditCicloData] = useState<any>({
-        id: '',
-        nombre: '',
-        fechaInicio: '',
-        fechaFin: ''
-    });
+    
+    const [processingCiclo, setProcessingCiclo] = useState(false);
+    const [cicloSuccessMessage, setCicloSuccessMessage] = useState<string | null>(null);
 
     const [expandedCiclo, setExpandedCiclo] = useState<string | null>(null);
+    const [filtroCiclos, setFiltroCiclos] = useState<'activo' | 'todos'>('activo');
 
     const toggleCiclo = (cicloId: string) => {
         if (expandedCiclo === cicloId) setExpandedCiclo(null);
@@ -75,44 +75,81 @@ const DetalleCoachee = () => {
         }
     };
 
-    const openEditCicloModal = (ciclo: any, defaultName: string) => {
-        setEditCicloData({
-            id: ciclo.id,
-            nombre: ciclo.nombre || defaultName,
-            fechaInicio: new Date(ciclo.fechaInicio).toISOString().split('T')[0],
-            fechaFin: new Date(ciclo.fechaFin).toISOString().split('T')[0]
+    const openCicloModal = (mode: 'CREATE' | 'CONTINUE' | 'EDIT', cicloToEdit?: any, defaultName?: string) => {
+        let defaultData = {
+            id: '',
+            nombre: `Ciclo ${coachee?.ciclos ? coachee.ciclos.length + 1 : 1}`,
+            fechaInicio: new Date().toISOString().split('T')[0],
+            fechaFin: '' // No usado en CREATE/CONTINUE visualmente, pero alojado aquí
+        };
+
+        if (mode === 'EDIT' && cicloToEdit) {
+            defaultData = {
+                id: cicloToEdit.id,
+                nombre: cicloToEdit.nombre || defaultName || 'Ciclo',
+                fechaInicio: new Date(cicloToEdit.fechaInicio).toISOString().split('T')[0],
+                fechaFin: new Date(cicloToEdit.fechaFin).toISOString().split('T')[0]
+            };
+        } else if (mode === 'CONTINUE') {
+            defaultData.nombre = `Ciclo ${coachee?.ciclos ? coachee.ciclos.length + 1 : 1}`;
+        }
+
+        setCicloModalState({
+            isOpen: true,
+            mode,
+            data: defaultData
         });
-        setIsEditCicloModalOpen(true);
     };
 
-    const handleUpdateCiclo = async () => {
-        setUpdatingCiclo(true);
+    const handleSaveCicloModal = async () => {
+        setProcessingCiclo(true);
         try {
-            const res = await fetch(`/api/coachees/${id}/ciclos/${editCicloData.id}`, {
-                method: 'PUT',
+            let endpoint = '';
+            let method = '';
+            let bodyData: any = {
+                nombre: cicloModalState.data.nombre,
+                fechaInicio: cicloModalState.data.fechaInicio
+            };
+
+            if (cicloModalState.mode === 'CREATE') {
+                endpoint = `/api/coachees/${id}/ciclos`;
+                method = 'POST';
+                if(cicloModalState.data.fechaFin) {
+                    bodyData.fechaFin = cicloModalState.data.fechaFin;
+                }
+            } else if (cicloModalState.mode === 'CONTINUE') {
+                endpoint = `/api/coachees/${id}/ciclos/continuar`;
+                method = 'POST';
+            } else if (cicloModalState.mode === 'EDIT') {
+                endpoint = `/api/coachees/${id}/ciclos/${cicloModalState.data.id}`;
+                method = 'PUT';
+                bodyData.fechaFin = cicloModalState.data.fechaFin;
+            }
+
+            const res = await fetch(endpoint, {
+                method,
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 },
-                body: JSON.stringify({
-                    nombre: editCicloData.nombre,
-                    fechaInicio: editCicloData.fechaInicio,
-                    fechaFin: editCicloData.fechaFin
-                })
+                body: JSON.stringify(bodyData)
             });
 
             if (res.ok) {
-                setIsEditCicloModalOpen(false);
-                setUpdateCicloSuccess(true);
-                setTimeout(() => setUpdateCicloSuccess(false), 4000);
+                setCicloModalState({ ...cicloModalState, isOpen: false });
+                if (cicloModalState.mode === 'EDIT') setCicloSuccessMessage("Ciclo actualizado correctamente");
+                else if (cicloModalState.mode === 'CONTINUE') setCicloSuccessMessage("Ciclo continuado exitosamente. Tareas clonadas y en estado pendiente.");
+                else setCicloSuccessMessage("Ciclo generado correctamente");
+                
+                setTimeout(() => setCicloSuccessMessage(null), 4000);
                 await fetchCoachee();
             } else {
-                console.error("Error al actualizar ciclo");
+                console.error("Error al procesar el ciclo");
             }
         } catch (err) {
             console.error("Error en conexión:", err);
         } finally {
-            setUpdatingCiclo(false);
+            setProcessingCiclo(false);
         }
     };
 
@@ -460,15 +497,9 @@ const DetalleCoachee = () => {
                 </div>
             )}
 
-            {cicloSuccess && (
-                <div className="absolute top-24 left-1/2 -translate-x-1/2 z-40 bg-[#A9D42C] text-white px-8 py-3 rounded-xl font-bold shadow-lg animate-bounce">
-                    Ciclo generado correctamente
-                </div>
-            )}
-
-            {updateCicloSuccess && (
-                <div className="absolute top-24 left-1/2 -translate-x-1/2 z-40 bg-blue-500 text-white px-8 py-3 rounded-xl font-bold shadow-lg animate-bounce">
-                    Ciclo actualizado correctamente
+            {cicloSuccessMessage && (
+                <div className="absolute top-24 left-1/2 -translate-x-1/2 z-40 bg-[#A9D42C] text-white px-8 py-3 rounded-xl font-bold shadow-lg animate-bounce text-center">
+                    {cicloSuccessMessage}
                 </div>
             )}
 
@@ -486,7 +517,10 @@ const DetalleCoachee = () => {
                 >
                     <Trash2 className="w-5 h-5" /> Eliminar Coachee
                 </button>
-                <button className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-sm">
+                <button 
+                    onClick={() => openCicloModal('CONTINUE')}
+                    className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-sm"
+                >
                     <PlayCircle className="w-5 h-5" /> Continuar Ciclo
                 </button>
             </div>
@@ -495,9 +529,25 @@ const DetalleCoachee = () => {
             <div className="w-full bg-white rounded-2xl p-8 shadow-[14px_17px_40px_4px_rgba(112,144,176,0.08)]">
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="text-xl font-black text-[#1B254B] tracking-tight">Ciclos de Trabajo</h2>
+                    
+                    <div className="flex gap-2 mr-auto ml-4">
+                        <button 
+                            onClick={() => setFiltroCiclos('activo')}
+                            className={`px-3 py-1.5 text-[10px] uppercase tracking-widest font-bold rounded-lg transition-colors ${filtroCiclos === 'activo' ? 'bg-[#1B254B] text-white' : 'bg-gray-100 text-gray-400'}`}
+                        >
+                            Solo Activos
+                        </button>
+                        <button 
+                            onClick={() => setFiltroCiclos('todos')}
+                            className={`px-3 py-1.5 text-[10px] uppercase tracking-widest font-bold rounded-lg transition-colors ${filtroCiclos === 'todos' ? 'bg-[#1B254B] text-white' : 'bg-gray-100 text-gray-400'}`}
+                        >
+                            Ver Historial
+                        </button>
+                    </div>
+
                     <div className="flex items-center gap-2">
                         <button 
-                            onClick={() => setIsNewCicloModalOpen(true)}
+                            onClick={() => openCicloModal('CREATE')}
                             className="flex items-center gap-2 px-4 py-2 bg-[#A9D42C] hover:bg-[#8eb825] text-white rounded-lg font-bold text-sm transition-colors shadow-sm"
                         >
                             + Nuevo Ciclo
@@ -515,10 +565,19 @@ const DetalleCoachee = () => {
                 
                 <div className="space-y-6">
                     {coachee.ciclos && coachee.ciclos.length > 0 ? (
-                        coachee.ciclos.map((ciclo: any, index: number) => {
+                        [...coachee.ciclos]
+                            .sort((a: any, b: any) => new Date(b.fechaInicio).getTime() - new Date(a.fechaInicio).getTime())
+                            .filter((c: any) => filtroCiclos === 'todos' || c.activo === true)
+                            .map((ciclo: any, index: number) => {
                             const isExpanded = expandedCiclo === ciclo.id;
                             const tareasTotal = ciclo.tareas ? ciclo.tareas.length : 0;
                             const tareasCompletadas = ciclo.tareas ? ciclo.tareas.filter((t:any) => !t.activa).length : 0; 
+                            
+                            // To accurately compute enumerations even when filtering, we compute it based on the original structure.
+                            // The true index of the cycle in the history is based on how many cycles there are in total 
+                            // assuming the backend returns them all. But we can just use the unsorted/unfiltered length.
+                            const cicloNumeration = coachee.ciclos.length - coachee.ciclos.findIndex((c: any) => c.id === ciclo.id);
+                            const isActivo = ciclo.estado === 'ACTIVO' || ciclo.activo === true;
                             
                             return (
                                 <div key={ciclo.id} className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm transition-all duration-300">
@@ -533,10 +592,10 @@ const DetalleCoachee = () => {
                                             <div>
                                                 <div className="flex items-center gap-3 mb-1">
                                                     <span className="font-black text-[#1B254B] text-lg">
-                                                        {ciclo.nombre ? ciclo.nombre : `Ciclo ${coachee.ciclos.length - index}: ${ciclo.producto}`}
+                                                        {ciclo.nombre ? ciclo.nombre : `Ciclo ${cicloNumeration}: ${ciclo.producto}`}
                                                     </span>
-                                                    <span className={`text-[10px] font-black px-2.5 py-1 rounded-md uppercase tracking-widest flex items-center gap-2 ${ciclo.estado === 'ACTIVO' ? 'bg-[#A9D42C] bg-opacity-20 text-green-800' : 'bg-gray-200 text-gray-600'}`}>
-                                                        {ciclo.estado}
+                                                    <span className={`text-[10px] font-black px-2.5 py-1 rounded-md uppercase tracking-widest flex items-center gap-2 ${isActivo ? 'bg-[#A9D42C] bg-opacity-20 text-green-800' : 'bg-gray-200 text-gray-600'}`}>
+                                                        {isActivo ? 'ACTIVO' : 'COMPLETADO'}
                                                     </span>
                                                     <span className="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded-md uppercase tracking-widest">
                                                         {contarDiasHabiles(ciclo.fechaInicio, ciclo.fechaFin)} días hábiles
@@ -566,7 +625,7 @@ const DetalleCoachee = () => {
                                             <div className="flex justify-between items-end mb-4">
                                                 <h4 className="font-bold text-gray-400 uppercase tracking-widest text-xs">Progreso</h4>
                                                 <button 
-                                                    onClick={() => openEditCicloModal(ciclo, `Ciclo ${coachee.ciclos.length - index}`)}
+                                                    onClick={() => openCicloModal('EDIT', ciclo, `Ciclo ${cicloNumeration}`)}
                                                     className="flex items-center gap-2 text-[12px] font-bold text-gray-400 hover:text-blue-500 transition-colors"
                                                 >
                                                     <Edit2 className="w-4 h-4" /> Editar Ciclo
@@ -661,12 +720,14 @@ const DetalleCoachee = () => {
                 </div>
             )}
 
-            {/* MODAL NUEVO CICLO INTELIGENTE */}
-            {isNewCicloModalOpen && (
+            {/* MODAL UNIVERSAL GESTION DE CICLOS (CREAR / CONTINUAR / EDITAR) */}
+            {cicloModalState.isOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md p-4">
                     <div className="bg-white rounded-2xl w-full max-w-md p-8 shadow-[14px_17px_40px_4px_rgba(112,144,176,0.08)] flex flex-col">
                         <h2 className="text-2xl font-black text-[#1B254B] mb-6 font-['Plus_Jakarta_Sans',_sans-serif] tracking-tight">
-                            Generar Nuevo Ciclo
+                            {cicloModalState.mode === 'CREATE' && 'Generar Nuevo Ciclo'}
+                            {cicloModalState.mode === 'CONTINUE' && 'Continuar Ciclo Existente'}
+                            {cicloModalState.mode === 'EDIT' && 'Editar Ciclo'}
                         </h2>
                         
                         <div className="space-y-4 mb-8">
@@ -675,8 +736,11 @@ const DetalleCoachee = () => {
                                 <input 
                                     type="text" 
                                     className="w-full px-4 py-2.5 rounded-xl border-none bg-[#F4F7FE] focus:ring-2 focus:ring-[#A9D42C] outline-none text-sm font-bold text-[#1B254B]"
-                                    value={newCicloData.nombre}
-                                    onChange={(e) => setNewCicloData({...newCicloData, nombre: e.target.value})}
+                                    value={cicloModalState.data.nombre}
+                                    onChange={(e) => setCicloModalState({
+                                        ...cicloModalState, 
+                                        data: { ...cicloModalState.data, nombre: e.target.value }
+                                    })}
                                 />
                             </div>
                             <div>
@@ -684,87 +748,55 @@ const DetalleCoachee = () => {
                                 <input 
                                     type="date" 
                                     className="w-full px-4 py-2.5 rounded-xl border-none bg-[#F4F7FE] focus:ring-2 focus:ring-[#A9D42C] outline-none text-sm font-bold text-[#1B254B]"
-                                    value={newCicloData.fechaInicio}
-                                    onChange={(e) => setNewCicloData({...newCicloData, fechaInicio: e.target.value})}
+                                    value={cicloModalState.data.fechaInicio}
+                                    onChange={(e) => setCicloModalState({
+                                        ...cicloModalState, 
+                                        data: { ...cicloModalState.data, fechaInicio: e.target.value }
+                                    })}
                                 />
                             </div>
+                            
+                            {(cicloModalState.mode === 'EDIT' || cicloModalState.mode === 'CREATE') && (
+                                <>
+                                    <div>
+                                        <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Fecha de Término</label>
+                                        <input 
+                                            type="date" 
+                                            className="w-full px-4 py-2.5 rounded-xl border-none bg-[#F4F7FE] focus:ring-2 focus:ring-[#A9D42C] outline-none text-sm font-bold text-[#1B254B]"
+                                            value={cicloModalState.data.fechaFin}
+                                            onChange={(e) => setCicloModalState({
+                                                ...cicloModalState, 
+                                                data: { ...cicloModalState.data, fechaFin: e.target.value }
+                                            })}
+                                        />
+                                    </div>
+                                    <p className="text-[10px] text-gray-400 font-bold leading-relaxed pt-2">
+                                        Modificar estas fechas sobrescribirá el cálculo automático del sistema. Úselo con precaución.
+                                    </p>
+                                </>
+                            )}
+                            
+                            {cicloModalState.mode === 'CONTINUE' && (
+                                <p className="text-[10px] text-blue-500 font-bold leading-relaxed pt-2 bg-blue-50 p-3 rounded-lg border border-blue-100">
+                                    💡 Se clonará la estructura de tareas del ciclo anterior dejándolas pendiente de cumplimiento. El ciclo previo pasará a estado COMPLETADO.
+                                </p>
+                            )}
                         </div>
 
                         <div className="flex w-full gap-4">
                             <button 
-                                onClick={() => setIsNewCicloModalOpen(false)}
-                                disabled={generatingCiclo}
+                                onClick={() => setCicloModalState({ ...cicloModalState, isOpen: false })}
+                                disabled={processingCiclo}
                                 className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-[#1B254B] font-bold transition-colors"
                             >
                                 Cancelar
                             </button>
                             <button 
-                                onClick={handleGenerateCiclo}
-                                disabled={generatingCiclo}
+                                onClick={handleSaveCicloModal}
+                                disabled={processingCiclo}
                                 className="flex-1 py-3 px-4 rounded-xl bg-[#A9D42C] hover:bg-[#8eb825] text-white font-bold transition-colors shadow-sm"
                             >
-                                {generatingCiclo ? 'Generando...' : 'Generar Ciclo'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* MODAL EDITAR CICLO (MANUAL OVERRIDE) */}
-            {isEditCicloModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md p-4">
-                    <div className="bg-white rounded-2xl w-full max-w-md p-8 shadow-[14px_17px_40px_4px_rgba(112,144,176,0.08)] flex flex-col">
-                        <h2 className="text-2xl font-black text-[#1B254B] mb-6 font-['Plus_Jakarta_Sans',_sans-serif] tracking-tight">
-                            Editar Ciclo
-                        </h2>
-                        
-                        <div className="space-y-4 mb-8">
-                            <div>
-                                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Nombre del Ciclo</label>
-                                <input 
-                                    type="text" 
-                                    className="w-full px-4 py-2.5 rounded-xl border-none bg-[#F4F7FE] focus:ring-2 focus:ring-[#A9D42C] outline-none text-sm font-bold text-[#1B254B]"
-                                    value={editCicloData.nombre}
-                                    onChange={(e) => setEditCicloData({...editCicloData, nombre: e.target.value})}
-                                />
-                            </div>
-                            <div>
-                                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Fecha de Inicio</label>
-                                <input 
-                                    type="date" 
-                                    className="w-full px-4 py-2.5 rounded-xl border-none bg-[#F4F7FE] focus:ring-2 focus:ring-[#A9D42C] outline-none text-sm font-bold text-[#1B254B]"
-                                    value={editCicloData.fechaInicio}
-                                    onChange={(e) => setEditCicloData({...editCicloData, fechaInicio: e.target.value})}
-                                />
-                            </div>
-                            <div>
-                                <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Fecha de Término</label>
-                                <input 
-                                    type="date" 
-                                    className="w-full px-4 py-2.5 rounded-xl border-none bg-[#F4F7FE] focus:ring-2 focus:ring-[#A9D42C] outline-none text-sm font-bold text-[#1B254B]"
-                                    value={editCicloData.fechaFin}
-                                    onChange={(e) => setEditCicloData({...editCicloData, fechaFin: e.target.value})}
-                                />
-                            </div>
-                            <p className="text-[10px] text-gray-400 font-bold leading-relaxed pt-2">
-                                Modificar estas fechas sobrescribirá el cálculo automático del sistema. Úselo con precaución.
-                            </p>
-                        </div>
-
-                        <div className="flex w-full gap-4">
-                            <button 
-                                onClick={() => setIsEditCicloModalOpen(false)}
-                                disabled={updatingCiclo}
-                                className="flex-1 py-3 px-4 rounded-xl bg-gray-100 hover:bg-gray-200 text-[#1B254B] font-bold transition-colors"
-                            >
-                                Cancelar
-                            </button>
-                            <button 
-                                onClick={handleUpdateCiclo}
-                                disabled={updatingCiclo}
-                                className="flex-1 py-3 px-4 rounded-xl bg-[#A9D42C] hover:bg-[#8eb825] text-white font-bold transition-colors shadow-sm"
-                            >
-                                {updatingCiclo ? 'Guardando...' : 'Guardar Cambios'}
+                                {processingCiclo ? 'Guardando...' : (cicloModalState.mode === 'EDIT' ? 'Guardar Cambios' : 'Generar Ciclo')}
                             </button>
                         </div>
                     </div>

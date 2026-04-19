@@ -69,7 +69,8 @@ export const obtenerCoacheePorId = async (req: Request, res: Response): Promise<
       },
       include: {
         ciclos: {
-          include: { tareas: true }
+          include: { tareas: true },
+          orderBy: { id: 'desc' }
         },
         contracts: true
       }
@@ -247,18 +248,26 @@ export const crearCicloInteligente = async (req: Request, res: Response): Promis
       return;
     }
 
-    const fechaFin = calcularFechaFinHabil(fechaInicioObj, diasHabiles);
+    const fechaFin = body.fechaFin ? new Date(body.fechaFin) : calcularFechaFinHabil(fechaInicioObj, diasHabiles);
     
-    // Si queremos el nombre "Ciclo X". Prisma schema de Ciclo no tiene un campo "nombre",
-    // pero si requiere producto, estado, totalDias, fechaInicio, fechaFin
+    await prisma.ciclo.updateMany({
+        where: { userId: id },
+        data: { estado: 'COMPLETADO', activo: false }
+    });
+    
+    const countCiclos = await prisma.ciclo.count({ where: { userId: id } });
+    const nombreCiclo = body.nombre ? body.nombre.replace(' (Continuación)', '') : `Ciclo ${countCiclos + 1}`;
+
     const nuevoCiclo = await prisma.ciclo.create({
       data: {
         userId: id,
+        nombre: nombreCiclo,
         fechaInicio: fechaInicioObj,
         fechaFin: fechaFin,
         producto: servicioContratado,
         totalDias: diasHabiles,
         estado: 'ACTIVO',
+        activo: true,
         diaActual: 1,
         comodinesUsados: 0
       }
@@ -300,4 +309,93 @@ export const actualizarCiclo = async (req: Request, res: Response): Promise<void
         console.error('Error al actualizar ciclo:', error);
         res.status(500).json({ message: 'Error interno al actualizar ciclo' });
     }
+};
+
+export const continuarCiclo = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const body = req.body;
+    let fechaInicioObj = new Date();
+    if (body && body.fechaInicio) {
+      fechaInicioObj = new Date(body.fechaInicio);
+    }
+
+    const coachee = await prisma.user.findUnique({
+      where: { id },
+      include: { 
+          ciclos: {
+              include: { tareas: true },
+              orderBy: { fechaInicio: 'desc' },
+              take: 1
+          } 
+      }
+    });
+
+    if (!coachee || !coachee.servicioContratado) {
+      res.status(404).json({ message: 'Coachee o servicio no encontrado' });
+      return;
+    }
+
+    const { servicioContratado } = coachee;
+
+    // Desactivar ciclos previos poniendolos como COMPLETADO y sin ser el activo principal
+    await prisma.ciclo.updateMany({
+        where: { userId: id },
+        data: { estado: 'COMPLETADO', activo: false }
+    });
+
+    let diasHabiles = 0;
+    if (servicioContratado === 'Sprint Digital 4S') {
+      diasHabiles = 20;
+    } else if (servicioContratado === 'Executive Mastery') {
+      diasHabiles = 40;
+    } else {
+      res.status(400).json({ message: 'El servicio contratado no soporta la creación autocalculada de este ciclo continuo.' });
+      return;
+    }
+
+    const fechaFin = calcularFechaFinHabil(fechaInicioObj, diasHabiles);
+    const countCiclos = await prisma.ciclo.count({ where: { userId: id } });
+    const nombreCiclo = body.nombre ? body.nombre.replace(' (Continuación)', '') : `Ciclo ${countCiclos + 1}`;
+
+    const nuevoCiclo = await prisma.ciclo.create({
+      data: {
+        userId: id,
+        nombre: nombreCiclo,
+        fechaInicio: fechaInicioObj,
+        fechaFin: fechaFin,
+        producto: servicioContratado,
+        totalDias: diasHabiles,
+        estado: 'ACTIVO',
+        activo: true,
+        diaActual: 1,
+        comodinesUsados: 0
+      }
+    });
+
+    // Clonacion de tareas del ciclo previo (lienzo en blanco, sin copia de cumplimientos)
+    if (coachee.ciclos.length > 0) {
+        const tareasPrevias = coachee.ciclos[0].tareas;
+        if (tareasPrevias && tareasPrevias.length > 0) {
+            const tareasNuevas = tareasPrevias.map((t: any) => ({
+                cicloId: nuevoCiclo.id,
+                nombre: t.nombre,
+                descripcion: t.descripcion,
+                periodicidad: t.periodicidad,
+                horaProgramada: t.horaProgramada,
+                icono: t.icono,
+                activa: true
+            }));
+            
+            await prisma.tarea.createMany({
+                data: tareasNuevas
+            });
+        }
+    }
+
+    res.status(201).json(nuevoCiclo);
+  } catch (error) {
+    console.error('Error al continuar ciclo:', error);
+    res.status(500).json({ message: 'Error interno del servidor al continuar el ciclo' });
+  }
 };
