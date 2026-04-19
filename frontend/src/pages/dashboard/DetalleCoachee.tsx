@@ -22,7 +22,7 @@ const DetalleCoachee = () => {
                 const data = await res.json();
                 setCoachee(data);
                 
-                const servicioReal = data.servicioContratado || data.contracts?.[0]?.content?.plan || data.ciclos?.[data.ciclos.length - 1]?.producto || 'SPRINT_4S';
+                const servicioReal = data.servicioContratado || data.contracts?.[0]?.content?.plan || data.ciclos?.[data.ciclos.length - 1]?.producto || 'Sprint Digital 4S';
 
                 setEditData({
                     nombre: data.nombre || '',
@@ -32,8 +32,8 @@ const DetalleCoachee = () => {
                     telefono: data.telefono || '',
                     empresa: data.empresa || '',
                     cargo: data.cargo || '',
-                    servicio: servicioReal,
-                    frecuencia: data.frecuenciaRecordatorios || 'SEMANAL',
+                    servicioContratado: servicioReal,
+                    frecuenciaRecordatorios: data.frecuenciaRecordatorios || 'Cada vez que debe hacer un compromiso',
                     diagnosticoRealizado: data.hasDiagnostico || false,
                     activo: data.activo
                 });
@@ -61,8 +61,8 @@ const DetalleCoachee = () => {
                 empresa: editData.empresa,
                 cargo: editData.cargo,
                 activo: editData.activo,
-                servicioContratado: editData.servicio,
-                frecuenciaRecordatorios: editData.frecuencia,
+                servicioContratado: editData.servicioContratado,
+                frecuenciaRecordatorios: editData.frecuenciaRecordatorios,
                 hasDiagnostico: editData.diagnosticoRealizado
             };
 
@@ -168,7 +168,7 @@ const DetalleCoachee = () => {
                         <InfoField label="Empresa" value={coachee.empresa} />
                         <InfoField label="Cargo Actual" value={coachee.cargo} />
                         <InfoField label="Servicio Contratado" value={coachee.servicioContratado || 'Sin Plan'} />
-                        <InfoField label="Frecuencia Recordatorios" value={coachee.frecuenciaRecordatorios || 'SEMANAL'} />
+                        <InfoField label="Frecuencia Recordatorios" value={coachee?.frecuenciaRecordatorios || 'No especificada'} />
                         <InfoField label="Diagnóstico Inicial" value={coachee.hasDiagnostico ? 'REALIZADO' : 'PENDIENTE'} />
                     </div>
                 ) : (
@@ -187,9 +187,10 @@ const DetalleCoachee = () => {
                             <div>
                                 <label className="text-[12px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Servicio Contratado</label>
                                 <select 
+                                    name="servicioContratado"
                                     className="w-full px-4 py-3 rounded-xl bg-[#F4F7FE] focus:ring-2 focus:ring-[#A9D42C] outline-none text-sm font-bold text-[#1B254B]"
-                                    value={editData.servicio}
-                                    onChange={(e) => setEditData({...editData, servicio: e.target.value})}
+                                    value={editData.servicioContratado}
+                                    onChange={(e) => setEditData({...editData, servicioContratado: e.target.value})}
                                 >
                                     <option value="Audit Toolkit">Audit Toolkit</option>
                                     <option value="Sprint Digital 4S">Sprint Digital 4S</option>
@@ -200,9 +201,10 @@ const DetalleCoachee = () => {
                             <div>
                                 <label className="text-[12px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Frecuencia Recordatorios</label>
                                 <select 
+                                    name="frecuenciaRecordatorios"
                                     className="w-full px-4 py-3 rounded-xl bg-[#F4F7FE] focus:ring-2 focus:ring-[#A9D42C] outline-none text-sm font-bold text-[#1B254B]"
-                                    value={editData.frecuencia}
-                                    onChange={(e) => setEditData({...editData, frecuencia: e.target.value})}
+                                    value={editData.frecuenciaRecordatorios}
+                                    onChange={(e) => setEditData({...editData, frecuenciaRecordatorios: e.target.value})}
                                 >
                                     <option value="Cada vez que debe hacer un compromiso">Cada vez que debe hacer un compromiso</option>
                                     <option value="Una vez al día en la mañana">Una vez al día en la mañana</option>
