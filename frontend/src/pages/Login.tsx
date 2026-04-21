@@ -17,8 +17,12 @@ const Login: React.FC = () => {
     setIsLoading(true);
 
     try {
-      await login(email, password);
-      navigate('/dashboard');
+      const user = await login(email, password);
+      if (user.hasCompletedDiagnostic === false) {
+        navigate('/diagnostico');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {

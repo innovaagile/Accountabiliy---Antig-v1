@@ -7,7 +7,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
   try {
     const user = await prisma.user.findUnique({
-      where: { email }
+      where: { email },
+      include: { diagnostico: true }
     });
 
     if (!user || user.activo === false) {
@@ -30,7 +31,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         id: user.id,
         nombre: user.nombre,
         email: user.email,
-        role: user.role
+        role: user.role,
+        hasCompletedDiagnostic: user.diagnostico?.estado === 'COMPLETADO'
       }
     });
 

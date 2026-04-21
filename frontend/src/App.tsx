@@ -7,6 +7,8 @@ import DashboardHome from './pages/dashboard/DashboardHome';
 import GestionFrases from './pages/dashboard/GestionFrases';
 import DetalleCoachee from './pages/dashboard/DetalleCoachee';
 
+import Diagnostico from './pages/Diagnostico';
+
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuth();
   if (!isAuthenticated) return <Navigate to="/login" />;
@@ -19,6 +21,14 @@ function App() {
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route 
+            path="/diagnostico" 
+            element={
+              <ProtectedRoute>
+                <Diagnostico />
+              </ProtectedRoute>
+            } 
+          />
           
           {/* Rutas protegidas envueltas en el MainLayout */}
           <Route 

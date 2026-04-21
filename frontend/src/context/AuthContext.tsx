@@ -1,16 +1,17 @@
-import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, type ReactNode } from 'react';
 
 interface User {
   id: string;
   nombre: string;
   email: string;
   role: string;
+  hasCompletedDiagnostic?: boolean;
 }
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -31,7 +32,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<User> => {
     const response = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -48,6 +49,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(data.user);
     localStorage.setItem('token', data.token);
     localStorage.setItem('user', JSON.stringify(data.user));
+
+    return data.user;
   };
 
   const logout = () => {

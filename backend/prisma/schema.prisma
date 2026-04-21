@@ -36,7 +36,7 @@ model User {
   cargo             String?
   contratoFirmado   Boolean         @default(false)
   hasDiagnostico    Boolean         @default(false)
-  servicioContratado String?
+  servicioContratado String?          @default("SPRINT_4S")
   frecuenciaRecordatorios String?
 
   coachId           String?
@@ -45,7 +45,7 @@ model User {
 
   ciclos            Ciclo[]
   cumplimientos     Cumplimiento[]
-  diagnosticos      Diagnostico[]
+  diagnostico       Diagnostico?
   contracts         Contract[]
 }
 
@@ -61,15 +61,22 @@ model Contract {
   user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model Diagnostico {
-  id                String          @id @default(uuid())
-  userId            String
-  fuga              String
-  puntosCriticos    String?
-  respuestas        Json
-  conclusionesAI    String?
+enum EstadoDiagnostico {
+  PENDIENTE
+  COMPLETADO
+}
 
-  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+model Diagnostico {
+  id                String            @id @default(uuid())
+  userId            String            @unique
+  estado            EstadoDiagnostico @default(PENDIENTE)
+  respuestasRaw     Json?
+  podioFinal        Json?
+  dimensionGanadora String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Ciclo {
