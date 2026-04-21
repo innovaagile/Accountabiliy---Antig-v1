@@ -94,9 +94,9 @@ export const createCoachee = async (req: Request, res: Response): Promise<void> 
     const exists = await prisma.user.findUnique({ where: { email } });
     if (exists) { res.status(400).json({ message: 'El coachee ya existe' }); return; }
     
-    const tempPassword = Math.random().toString(36).slice(-8);
-    const saltRounds = 10;
-    const passwordHash = await bcrypt.hash(tempPassword, saltRounds);
+    // Contraseña estándar temporal para fase DEV
+    const tempPassword = "Innova2026";
+    const passwordHash = await bcrypt.hash("Innova2026", 10);
 
     const newCoachee = await prisma.user.create({
       data: {
@@ -110,7 +110,7 @@ export const createCoachee = async (req: Request, res: Response): Promise<void> 
       }
     });
 
-    await enviarCorreoBienvenida(email, nombre, tempPassword);
+    // await enviarCorreoBienvenida(email, nombre, tempPassword);
 
     res.status(201).json({
       id: newCoachee.id,
@@ -171,21 +171,18 @@ export const resetearPassword = async (req: Request, res: Response): Promise<voi
   try {
     const { id } = req.params;
     
-    // Generar contraseña temporal de 8 caracteres alfanuméricos
-    const tempPassword = Math.random().toString(36).slice(-8);
-    
-    // Hashear la contraseña
-    const saltRounds = 10;
-    const passwordHash = await bcrypt.hash(tempPassword, saltRounds);
+    // Contraseña estándar para reseteo en fase DEV
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash("Innova2026", salt);
     
     // Actualizar base de datos
     const coachee = await prisma.user.update({
       where: { id },
-      data: { passwordHash }
+      data: { passwordHash: hashedPassword }
     });
 
     // Enviar email falso estructurado
-    await enviarCorreoReseteo(coachee.email, coachee.nombre, tempPassword);
+    // await enviarCorreoReseteo(coachee.email, coachee.nombre, tempPassword);
 
     res.json({ message: 'Contraseña reseteada con éxito' });
   } catch (error) {

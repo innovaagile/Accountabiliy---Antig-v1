@@ -79,6 +79,7 @@ const DashboardHome = () => {
         <button onClick={() => setIsExportarOpen(true)} className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-md font-medium text-sm transition-colors shadow-sm"><FileSpreadsheet className="w-4 h-4" />Exportar Excel</button>
         <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium text-sm transition-colors shadow-sm"><BarChart2 className="w-4 h-4" />Métricas</button>
         <Link to="/dashboard/frases" className="flex items-center gap-2 bg-teal-800 hover:bg-teal-900 text-white px-4 py-2 rounded-md font-medium text-sm transition-colors shadow-sm"><MessageSquare className="w-4 h-4" />Gestionar Frases</Link>
+        <Link to="/diagnostico" className="flex items-center gap-2 bg-[#1B254B] hover:bg-[#0F1633] text-white px-4 py-2 rounded-md font-medium text-sm transition-colors shadow-sm"><Eye className="w-4 h-4" />Vista Previa M.E.S. (Modo QA)</Link>
       </div>
 
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 mt-6">

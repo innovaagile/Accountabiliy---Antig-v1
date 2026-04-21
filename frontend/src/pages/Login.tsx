@@ -18,9 +18,17 @@ const Login: React.FC = () => {
 
     try {
       const user = await login(email, password);
-      if (user.hasCompletedDiagnostic === false) {
-        navigate('/diagnostico');
+      if (user.role === 'ADMIN') {
+        // Redirigir al panel actual de administración
+        navigate('/dashboard');
+      } else if (user.role === 'COACHEE') {
+        if (user.hasCompletedDiagnostic === false) {
+          navigate('/diagnostico');
+        } else {
+          navigate('/dashboard');
+        }
       } else {
+        // Fallback por defecto
         navigate('/dashboard');
       }
     } catch (err: any) {

@@ -32,7 +32,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         nombre: user.nombre,
         email: user.email,
         role: user.role,
-        hasCompletedDiagnostic: user.diagnostico?.estado === 'COMPLETADO'
+        hasCompletedDiagnostic: user.role === 'ADMIN' ? true : user.diagnostico?.estado === 'COMPLETADO'
       }
     });
 
