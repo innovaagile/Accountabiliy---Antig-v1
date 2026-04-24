@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { preguntasMES } from '../data/preguntasMES';
 import { diagnosticosMES } from '../data/diagnosticosMES';
 import { Check, ChevronRight, Loader2, ArrowRight, Zap, AlertTriangle, Sparkles, Calendar } from 'lucide-react';
+import { apiFetch } from '../api/config';
 
 // Nivel 1 = 1pt, Nivel 2 = 2pts, Nivel 3 = 5pts, Nivel 4 = 10pts, Nivel 5 = 20pts
 const SCORE_MAP: Record<number, number> = {
@@ -18,7 +19,6 @@ const Diagnostico: React.FC = () => {
   const navigate = useNavigate();
   const { token, user } = useAuth();
   const [step, setStep] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
 
   const handleDashboardRedirectAttempt = () => {
     alert("Atención: El diagnóstico inicial es un paso obligatorio para personalizar tu Dashboard. Por favor complétalo para continuar.");
@@ -45,23 +45,35 @@ const Diagnostico: React.FC = () => {
   const [firma, setFirma] = useState('');
   const isFirmaValida = firma.trim().length > 3;
   const tipoServicio = (user as any)?.tipoServicio || 'Executive Mastery';
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (step === 7 && planGenerado) {
-      // Llamada silenciosa al backend para enviar el email con el PDF
-      fetch('/api/contrato/enviar-email', {
+  const handleSellarCompromiso = async () => {
+    if (!isFirmaValida) return;
+    setIsSubmitting(true);
+    try {
+      const response = await apiFetch('/contratos/sellar', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ plan: planGenerado, firma, usuario: user })
-      }).catch(console.error); // Falla silenciosa permitida aquí
+        body: JSON.stringify({ firma, planGenerado })
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al sellar el compromiso');
+      }
+
+      setStep(7); // Avanza a la vista de éxito
+    } catch (error) {
+      console.error(error);
+      alert('Ocurrió un error al procesar el documento. Por favor, intenta de nuevo.');
+    } finally {
+      setIsSubmitting(false);
     }
-  }, [step]);
+  };
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (isLoadingPlan) {
       setProgress(0);
       interval = setInterval(() => {
@@ -155,13 +167,12 @@ const Diagnostico: React.FC = () => {
       if (!q1) throw new Error("No hay síntoma principal seleccionado");
       
       const problemaElegido = q1.texto;
-      const nombreUsuario = user?.name || 'Participante';
+      const nombreUsuario = user?.nombre || 'Participante';
 
-      const response = await fetch('/api/ia/generar-plan', {
+      const response = await apiFetch('/ia/generar-plan', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ nombreUsuario, problemaElegido })
       });
@@ -504,7 +515,7 @@ const Diagnostico: React.FC = () => {
                 Volver
               </button>
               <button
-                disabled={!canFinish || isLoading}
+                disabled={!canFinish}
                 onClick={() => setStep(4)}
                 className={`flex items-center gap-2 font-bold py-4 px-8 rounded-full transition duration-300 shadow-lg 
                   ${canFinish 
@@ -860,14 +871,23 @@ const Diagnostico: React.FC = () => {
                     />
 
                     <button 
-                      disabled={!isFirmaValida}
-                      onClick={() => setStep(7)}
+                      disabled={!isFirmaValida || isSubmitting}
+                      onClick={handleSellarCompromiso}
                       className={`w-full font-black rounded-full px-8 py-5 transition-all duration-300 flex items-center justify-center gap-2 text-lg shadow-lg
-                        ${isFirmaValida 
+                        ${isFirmaValida && !isSubmitting
                           ? 'bg-[#A9D42C] text-[#1B254B] hover:scale-[1.02] cursor-pointer shadow-[#A9D42C]/30' 
                           : 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none'}`}
                     >
-                      SELLAR COMPROMISO <ArrowRight className="w-6 h-6" />
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="w-6 h-6 animate-spin" />
+                          GENERANDO DOCUMENTO LEGAL...
+                        </>
+                      ) : (
+                        <>
+                          SELLAR COMPROMISO <ArrowRight className="w-6 h-6" />
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>

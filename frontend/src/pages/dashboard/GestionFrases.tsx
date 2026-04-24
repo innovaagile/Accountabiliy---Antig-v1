@@ -1,3 +1,4 @@
+import { apiFetch } from '../../api/config';
 import React, { useState, useEffect } from 'react';
 import { Trash2 } from 'lucide-react';
 
@@ -6,8 +7,7 @@ const TIPOS_FRASE = {
   DESPEDIDA: 'Frases de Despedida',
   MOTIVACIONAL_ALTA: 'Alta (+70%)',
   MOTIVACIONAL_MEDIA: 'Media (40-69%)',
-  MOTIVACIONAL_BAJA: 'Baja (<40%)',
-};
+  MOTIVACIONAL_BAJA: 'Baja (<40%)'};
 
 type TipoFrase = keyof typeof TIPOS_FRASE;
 
@@ -35,9 +35,9 @@ export default function GestionFrases() {
   const fetchFrases = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:3000/api/frases', {
+      const response = await apiFetch('/frases', {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}` // asumiendo que el token se guarda aquí
+           // asumiendo que el token se guarda aquí
         }
       });
       if (response.ok) {
@@ -58,12 +58,9 @@ export default function GestionFrases() {
   const handleCrearFrase = async () => {
     if (!nuevoTexto.trim()) return;
     try {
-      const response = await fetch('http://localhost:3000/api/frases', {
+      const response = await apiFetch('/frases', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ texto: nuevoTexto, tipo: nuevoTipo })
       });
       if (response.ok) {
@@ -85,12 +82,8 @@ export default function GestionFrases() {
   const confirmDeleteFrase = async () => {
     if (!fraseToDelete) return;
     try {
-      const response = await fetch(`http://localhost:3000/api/frases/${fraseToDelete}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      const response = await apiFetch(`/frases/${fraseToDelete}`, {
+        method: 'DELETE'});
       if (response.ok) {
         setFrases(prev => prev.filter(f => f.id !== fraseToDelete));
         setIsDeleteModalOpen(false);

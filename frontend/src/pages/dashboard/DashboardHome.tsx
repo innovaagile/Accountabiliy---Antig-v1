@@ -1,3 +1,4 @@
+import { apiFetch } from '../../api/config';
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
@@ -31,10 +32,8 @@ const DashboardHome = () => {
         if (servicio) queryParams.append('servicio', servicio);
         if (estado) queryParams.append('estado', estado);
 
-        const response = await fetch(`http://localhost:3000/api/coachees?${queryParams.toString()}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
+        const response = await apiFetch(`/coachees?${queryParams.toString()}`, {
+          
         });
         if (response.ok) {
           const data = await response.json();
@@ -135,7 +134,7 @@ const DashboardHome = () => {
               <div className="flex items-center gap-4 flex-wrap justify-end">
                 <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${coachee.estado === 'Activo' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>{coachee.estado}</span>
                 <button className="flex items-center gap-1 text-sm text-gray-600 hover:text-blue-600 transition-colors"><Eye className="w-4 h-4" /> Ver Página</button>
-                <Link to={`/dashboard/coachee/${coachee.id}?action=new-task`} className="flex items-center gap-1 text-sm text-gray-600 hover:text-orange-600 transition-colors"><ListTodo className="w-4 h-4" /> Hábitos</Link>
+                <Link to={`/dashboard/coachee/${coachee.id}`} className="flex items-center gap-1 text-sm text-gray-600 hover:text-orange-600 transition-colors"><ListTodo className="w-4 h-4" /> Hábitos</Link>
                 <Link to={`/dashboard/coachee/${coachee.id}`} className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 transition-colors"><Info className="w-4 h-4" /> Info</Link>
                 <button className="flex items-center gap-1 text-sm text-red-500 hover:text-red-700 transition-colors"><UserMinus className="w-4 h-4" /> Desact.</button>
               </div>

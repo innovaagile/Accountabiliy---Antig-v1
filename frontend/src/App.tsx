@@ -6,6 +6,7 @@ import MainLayout from './components/layout/MainLayout';
 import DashboardHome from './pages/dashboard/DashboardHome';
 import GestionFrases from './pages/dashboard/GestionFrases';
 import DetalleCoachee from './pages/dashboard/DetalleCoachee';
+import CambiarPassword from './pages/CambiarPassword';
 
 import Diagnostico from './pages/Diagnostico';
 
@@ -26,6 +27,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Diagnostico />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/cambiar-password" 
+            element={
+              <ProtectedRoute>
+                <CambiarPassword />
               </ProtectedRoute>
             } 
           />

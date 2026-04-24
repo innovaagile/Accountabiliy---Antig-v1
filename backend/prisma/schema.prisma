@@ -36,6 +36,7 @@ model User {
   cargo             String?
   contratoFirmado   Boolean         @default(false)
   hasDiagnostico    Boolean         @default(false)
+  debeCambiarPassword Boolean       @default(true)
   servicioContratado String?          @default("SPRINT_4S")
   frecuenciaRecordatorios String?
 

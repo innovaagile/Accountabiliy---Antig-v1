@@ -1,3 +1,4 @@
+import { apiFetch } from '../../api/config';
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Edit2, KeyRound, Trash2, PlayCircle, FileText, ChevronDown, CheckCircle, Activity, Target, Zap, Heart, Star, Book, Coffee, Bell, Award, Anchor, Briefcase } from 'lucide-react';
@@ -115,12 +116,8 @@ const DetalleCoachee = () => {
         if (!cicloAEliminar) return;
         setProcessingCiclo(true);
         try {
-            const res = await fetch(`/api/coachees/${id}/ciclos/${cicloAEliminar}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            });
+            const res = await apiFetch(`/coachees/${id}/ciclos/${cicloAEliminar}`, {
+                method: 'DELETE'});
             if (res.ok) {
                 setCicloAEliminar(null);
                 await fetchCoachee();
@@ -198,10 +195,8 @@ const DetalleCoachee = () => {
         if (!tareaAEliminar || !cicloPadreDeTarea) return;
         setProcessingTarea(true);
         try {
-            const res = await fetch(`/api/coachees/${id}/ciclos/${cicloPadreDeTarea}/tareas/${tareaAEliminar}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-            });
+            const res = await apiFetch(`/coachees/${id}/ciclos/${cicloPadreDeTarea}/tareas/${tareaAEliminar}`, {
+                method: 'DELETE'});
             if (res.ok) {
                 setTareaAEliminar(null);
                 setCicloPadreDeTarea(null);
@@ -230,12 +225,9 @@ const DetalleCoachee = () => {
                     : undefined
             };
 
-            const res = await fetch(endpoint, {
+            const res = await apiFetch(endpoint, {
                 method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payloadData)
             });
 
@@ -275,12 +267,9 @@ const DetalleCoachee = () => {
                 bodyData.fechaFin = cicloModalState.data.fechaFin;
             }
 
-            const res = await fetch(endpoint, {
+            const res = await apiFetch(endpoint, {
                 method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(bodyData)
             });
 
@@ -304,8 +293,8 @@ const DetalleCoachee = () => {
 
     const fetchCoachee = async () => {
         try {
-            const res = await fetch(`/api/coachees/${id}`, {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            const res = await apiFetch(`/coachees/${id}`, {
+                
             });
             if (res.ok) {
                 const data = await res.json();
@@ -355,12 +344,9 @@ const DetalleCoachee = () => {
                 hasDiagnostico: editData.hasDiagnostico
             };
 
-            const res = await fetch(`/api/coachees/${id}`, {
+            const res = await apiFetch(`/coachees/${id}`, {
                 method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
 
@@ -378,12 +364,8 @@ const DetalleCoachee = () => {
     const handleDelete = async () => {
         setDeleting(true);
         try {
-            const res = await fetch(`/api/coachees/${id}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            });
+            const res = await apiFetch(`/coachees/${id}`, {
+                method: 'DELETE'});
 
             if (res.ok) {
                 setIsDeleteModalOpen(false);
@@ -401,12 +383,8 @@ const DetalleCoachee = () => {
     const handleResetPassword = async () => {
         setResetting(true);
         try {
-            const res = await fetch(`/api/coachees/${id}/reset-password`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            });
+            const res = await apiFetch(`/coachees/${id}/reset-password`, {
+                method: 'POST'});
 
             if (res.ok) {
                 setIsResetModalOpen(false);
@@ -425,12 +403,8 @@ const DetalleCoachee = () => {
     const handleSendContract = async () => {
         setSendingContract(true);
         try {
-            const res = await fetch(`/api/coachees/${id}/enviar-contrato`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            });
+            const res = await apiFetch(`/coachees/${id}/enviar-contrato`, {
+                method: 'POST'});
 
             if (res.ok) {
                 setContractSuccess(true);
@@ -451,12 +425,8 @@ const DetalleCoachee = () => {
         if (!coachee) return;
         
         try {
-            const res = await fetch(`/api/coachees/${id}/toggle-estado`, {
-                method: 'PATCH',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            });
+            const res = await apiFetch(`/coachees/${id}/toggle-estado`, {
+                method: 'PATCH'});
 
             if (res.ok) {
                 setShowToggleModal(false);
@@ -469,16 +439,7 @@ const DetalleCoachee = () => {
         }
     };
 
-    useEffect(() => {
-        if (coachee && searchParams.get('action') === 'new-task') {
-            const activeCycle = coachee.ciclos?.find((c:any) => c.activo === true);
-            if (activeCycle) {
-                setTimeout(() => openTareaModal('CREATE', activeCycle), 100);
-            }
-            searchParams.delete('action');
-            setSearchParams(searchParams, { replace: true });
-        }
-    }, [coachee, searchParams]);
+
 
     if (loading || !coachee) return (
         <div className="min-h-screen flex items-center justify-center p-10 font-black text-[#1B254B]">

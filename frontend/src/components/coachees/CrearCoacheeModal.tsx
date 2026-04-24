@@ -1,3 +1,4 @@
+import { apiFetch } from '../../api/config';
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 
@@ -10,8 +11,7 @@ interface CrearCoacheeModalProps {
 const CrearCoacheeModal: React.FC<CrearCoacheeModalProps> = ({ isOpen, onClose, onGuardar }) => {
   const [formData, setFormData] = useState({
     nombre: '', apellido: '', email: '', pais: 'Chile', telefono: '',
-    empresa: '', cargo: '', servicio: 'Sprint Digital 4S', frecuencia: 'Cada vez que debe hacer un compromiso',
-  });
+    empresa: '', cargo: '', servicio: 'Sprint Digital 4S', frecuencia: 'Cada vez que debe hacer un compromiso'});
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -27,12 +27,10 @@ const CrearCoacheeModal: React.FC<CrearCoacheeModalProps> = ({ isOpen, onClose, 
     setErrorMsg('');
     
     try {
-      const response = await fetch('/api/coachees', {
+      console.log("🚀 Disparando fetch directamente a: http://localhost:3000/api/coachees");
+      const response = await apiFetch('/coachees', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
 

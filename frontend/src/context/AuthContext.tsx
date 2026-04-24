@@ -1,3 +1,4 @@
+import { apiFetch } from '../api/config';
 import React, { createContext, useState, useContext, useEffect, type ReactNode } from 'react';
 
 interface User {
@@ -6,6 +7,7 @@ interface User {
   email: string;
   role: string;
   hasCompletedDiagnostic?: boolean;
+  debeCambiarPassword?: boolean;
 }
 
 interface AuthContextType {
@@ -33,11 +35,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const login = async (email: string, password: string): Promise<User> => {
-    const response = await fetch('/api/auth/login', {
+    const response = await apiFetch('/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
+      body: JSON.stringify({ email, password })});
 
     const data = await response.json();
 

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { enviarContratoFirmado } from '../services/emailService';
 
 // Instanciar el SDK de Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
@@ -186,5 +187,23 @@ Reglas obligatorias del JSON:
     console.error("Mensaje:", error.message);
     console.error("Traza completa:", error);
     res.status(500).json({ success: false, message: error.message || "Error desconocido en Gemini" });
+  }
+};
+
+export const enviarEmail = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { emailUsuario, datosPlan, nombreArchivoPDF } = req.body;
+
+    if (!emailUsuario || !datosPlan) {
+      res.status(400).json({ success: false, message: 'Faltan datos requeridos (emailUsuario, datosPlan)' });
+      return;
+    }
+
+    await enviarContratoFirmado(emailUsuario, datosPlan, nombreArchivoPDF);
+
+    res.json({ success: true, message: 'Email enviado exitosamente' });
+  } catch (error: any) {
+    console.error("Error al enviar email:", error);
+    res.status(500).json({ success: false, message: 'Error interno al enviar el correo' });
   }
 };

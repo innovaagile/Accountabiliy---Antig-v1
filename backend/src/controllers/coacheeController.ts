@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import prisma from '../config/db';
-import { enviarCorreoBienvenida, enviarCorreoReseteo, enviarCorreoContrato } from '../utils/emailService';
+import { enviarCorreoReseteo, enviarCorreoContrato } from '../utils/emailService';
+import { enviarCorreoBienvenida } from '../services/emailService';
 import { calcularFechaFinHabil } from '../utils/dateUtils';
 
 export const obtenerCoachees = async (req: Request, res: Response): Promise<void> => {
@@ -90,6 +91,7 @@ export const obtenerCoacheePorId = async (req: Request, res: Response): Promise<
 
 export const createCoachee = async (req: Request, res: Response): Promise<void> => {
   try {
+    console.log("--- INICIANDO CREACIÓN DE COACHEE ---");
     const { nombre, apellido, email, pais, telefono, empresa, cargo, servicio, frecuencia } = req.body;
     const exists = await prisma.user.findUnique({ where: { email } });
     if (exists) { res.status(400).json({ message: 'El coachee ya existe' }); return; }
@@ -109,9 +111,43 @@ export const createCoachee = async (req: Request, res: Response): Promise<void> 
         frecuenciaRecordatorios: frecuencia,
       }
     });
+    
+    console.log("1. Usuario guardado en BD:", newCoachee.id);
 
-    // await enviarCorreoBienvenida(email, nombre, tempPassword);
+    const fechaInicio = new Date();
+    const fechaFin = new Date();
+    fechaFin.setDate(fechaInicio.getDate() + 28); // 28 días calendario aprox. 20 días hábiles
 
+    console.log("2. Intentando crear ciclo de 28 días...");
+    try {
+      await prisma.ciclo.create({
+        data: {
+          userId: newCoachee.id,
+          fechaInicio,
+          fechaFin,
+          estado: 'ACTIVO',
+          activo: true,
+          nombre: 'Ciclo 1',
+          producto: servicio || 'SPRINT_4S',
+          totalDias: 20,
+          diaActual: 1,
+          comodinesUsados: 0
+        }
+      });
+      console.log("3. Ciclo guardado exitosamente en BD");
+    } catch(err) {
+      console.error("!!! ERROR CREANDO CICLO:", err);
+    }
+
+    console.log("4. Intentando enviar email a:", email);
+    try {
+      await enviarCorreoBienvenida(email, nombre, tempPassword);
+    } catch (emailError) {
+      console.error("!!! ERROR ENVIANDO EMAIL:", emailError);
+      // NO se aborta la creación.
+    }
+
+    console.log("5. Respondiendo 201 al frontend");
     res.status(201).json({
       id: newCoachee.id,
       nombre: `${newCoachee.nombre} ${newCoachee.apellido}`,
@@ -123,6 +159,7 @@ export const createCoachee = async (req: Request, res: Response): Promise<void> 
       estado: 'Activo'
     });
   } catch (error) {
+    console.error("!!! ERROR FATAL CREANDO COACHEE:", error);
     res.status(500).json({ message: 'Error creando coachee' });
   }
 };
