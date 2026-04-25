@@ -115,11 +115,23 @@ export const createCoachee = async (req: Request, res: Response): Promise<void> 
     
     console.log("1. Usuario guardado en BD:", newCoachee.id);
 
+    const planNormalizado = (servicio || '').toLowerCase().trim();
+    let totalDias = 28;
+    let diasCalendario = 28;
+
+    if (planNormalizado.includes('executive')) {
+      totalDias = 40;
+      diasCalendario = 56;
+    } else if (planNormalizado.includes('4s')) {
+      totalDias = 28;
+      diasCalendario = 28;
+    }
+
     const fechaInicio = new Date();
     const fechaFin = new Date();
-    fechaFin.setDate(fechaInicio.getDate() + 28); // 28 días calendario aprox. 20 días hábiles
+    fechaFin.setDate(fechaInicio.getDate() + diasCalendario);
 
-    console.log("2. Intentando crear ciclo de 28 días...");
+    console.log(`2. Intentando crear ciclo de ${diasCalendario} días...`);
     try {
       await prisma.ciclo.create({
         data: {
@@ -130,7 +142,7 @@ export const createCoachee = async (req: Request, res: Response): Promise<void> 
           activo: true,
           nombre: 'Ciclo 1',
           producto: servicio || 'SPRINT_4S',
-          totalDias: 20,
+          totalDias: totalDias,
           diaActual: 1,
           comodinesUsados: 0
         }
@@ -275,9 +287,9 @@ export const crearCicloInteligente = async (req: Request, res: Response): Promis
     }
 
     let diasHabiles = 0;
-    if (servicioContratado === 'Sprint Digital 4S') {
+    if (servicioContratado?.toLowerCase().includes('4s')) {
       diasHabiles = 20;
-    } else if (servicioContratado === 'Executive Mastery') {
+    } else if (servicioContratado?.toLowerCase().includes('executive')) {
       diasHabiles = 40;
     } else {
       res.status(400).json({ message: 'Servicio contratado inválido o no soportado' });
@@ -381,9 +393,9 @@ export const continuarCiclo = async (req: Request, res: Response): Promise<void>
     });
 
     let diasHabiles = 0;
-    if (servicioContratado === 'Sprint Digital 4S') {
+    if (servicioContratado?.toLowerCase().includes('4s')) {
       diasHabiles = 20;
-    } else if (servicioContratado === 'Executive Mastery') {
+    } else if (servicioContratado?.toLowerCase().includes('executive')) {
       diasHabiles = 40;
     } else {
       res.status(400).json({ message: 'El servicio contratado no soporta la creación autocalculada de este ciclo continuo.' });

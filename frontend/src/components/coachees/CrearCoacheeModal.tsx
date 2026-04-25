@@ -15,6 +15,16 @@ const CrearCoacheeModal: React.FC<CrearCoacheeModalProps> = ({ isOpen, onClose, 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
+  const countryPhoneMap: Record<string, string> = {
+    'Chile': '+56',
+    'Argentina': '+54',
+    'Perú': '+51',
+    'Colombia': '+57',
+    'México': '+52',
+    'España': '+34',
+    'Estados Unidos': '+1'
+  };
+
   if (!isOpen) return null;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -70,8 +80,23 @@ const CrearCoacheeModal: React.FC<CrearCoacheeModalProps> = ({ isOpen, onClose, 
             <div><label className="block text-sm font-medium text-gray-700 mb-1">Email <span className="text-red-500">*</span></label><input required type="email" name="email" value={formData.email} onChange={handleChange} className="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none" /></div>
             <div>
               <div className="grid grid-cols-3 gap-2">
-                <div className="col-span-1"><label className="block text-sm font-medium text-gray-700 mb-1">País</label><input type="text" name="pais" value={formData.pais} onChange={handleChange} className="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none" /></div>
-                <div className="col-span-2"><label className="block text-sm font-medium text-gray-700 mb-1">Teléfono <span className="text-red-500">*</span></label><div className="flex"><span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm">+56</span><input required type="text" name="telefono" value={formData.telefono} onChange={handleChange} className="flex-1 w-full border border-gray-300 rounded-none rounded-r-md py-2 px-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none" /></div></div>
+                <div className="col-span-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">País</label>
+                  <select name="pais" value={formData.pais} onChange={handleChange} className="w-full border border-gray-300 rounded-md py-2 px-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                    {Object.keys(countryPhoneMap).map(country => (
+                      <option key={country} value={country}>{country}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Teléfono <span className="text-red-500">*</span></label>
+                  <div className="flex">
+                    <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm">
+                      {countryPhoneMap[formData.pais] || '+56'}
+                    </span>
+                    <input required type="text" name="telefono" value={formData.telefono} onChange={handleChange} className="flex-1 w-full border border-gray-300 rounded-none rounded-r-md py-2 px-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                  </div>
+                </div>
               </div>
             </div>
           </div>

@@ -2,7 +2,7 @@ import { apiFetch } from '../api/config';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 
 const CambiarPassword = () => {
   const [passwordActual, setPasswordActual] = useState('');
@@ -10,6 +10,9 @@ const CambiarPassword = () => {
   const [confirmarPassword, setConfirmarPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword1, setShowPassword1] = useState(false);
+  const [showPassword2, setShowPassword2] = useState(false);
+  const [showPassword3, setShowPassword3] = useState(false);
   
   const { user, token } = useAuth();
   const navigate = useNavigate();
@@ -89,16 +92,23 @@ const CambiarPassword = () => {
             <label htmlFor="passwordActual" className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 block">
               Contraseña Temporal
             </label>
-            <div className="mt-1">
+            <div className="mt-1 relative">
               <input
                 id="passwordActual"
-                type="password"
+                type={showPassword1 ? "text" : "password"}
                 required
                 value={passwordActual}
                 onChange={(e) => setPasswordActual(e.target.value)}
-                className="bg-[#F4F7FE] outline-none border-none rounded-2xl p-4 w-full text-[#1B254B] font-medium placeholder-gray-400 focus:ring-2 focus:ring-[#A9D42C] transition-all"
+                className="bg-[#F4F7FE] outline-none border-none rounded-2xl p-4 w-full text-[#1B254B] font-medium placeholder-gray-400 focus:ring-2 focus:ring-[#A9D42C] transition-all pr-12"
                 placeholder="La que recibiste por email"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword1(!showPassword1)}
+                className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-[#1B254B] transition-colors focus:outline-none"
+              >
+                {showPassword1 ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
             </div>
           </div>
 
@@ -106,16 +116,23 @@ const CambiarPassword = () => {
             <label htmlFor="nuevaPassword" className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 block">
               Nueva Contraseña
             </label>
-            <div className="mt-1">
+            <div className="mt-1 relative">
               <input
                 id="nuevaPassword"
-                type="password"
+                type={showPassword2 ? "text" : "password"}
                 required
                 value={nuevaPassword}
                 onChange={(e) => setNuevaPassword(e.target.value)}
-                className="bg-[#F4F7FE] outline-none border-none rounded-2xl p-4 w-full text-[#1B254B] font-medium placeholder-gray-400 focus:ring-2 focus:ring-[#A9D42C] transition-all"
+                className="bg-[#F4F7FE] outline-none border-none rounded-2xl p-4 w-full text-[#1B254B] font-medium placeholder-gray-400 focus:ring-2 focus:ring-[#A9D42C] transition-all pr-12"
                 placeholder="Mínimo 8 caracteres"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword2(!showPassword2)}
+                className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-[#1B254B] transition-colors focus:outline-none"
+              >
+                {showPassword2 ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
             </div>
           </div>
 
@@ -123,16 +140,23 @@ const CambiarPassword = () => {
             <label htmlFor="confirmarPassword" className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 block">
               Confirmar Nueva Contraseña
             </label>
-            <div className="mt-1">
+            <div className="mt-1 relative">
               <input
                 id="confirmarPassword"
-                type="password"
+                type={showPassword3 ? "text" : "password"}
                 required
                 value={confirmarPassword}
                 onChange={(e) => setConfirmarPassword(e.target.value)}
-                className="bg-[#F4F7FE] outline-none border-none rounded-2xl p-4 w-full text-[#1B254B] font-medium placeholder-gray-400 focus:ring-2 focus:ring-[#A9D42C] transition-all"
+                className="bg-[#F4F7FE] outline-none border-none rounded-2xl p-4 w-full text-[#1B254B] font-medium placeholder-gray-400 focus:ring-2 focus:ring-[#A9D42C] transition-all pr-12"
                 placeholder="Repite tu nueva contraseña"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword3(!showPassword3)}
+                className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-[#1B254B] transition-colors focus:outline-none"
+              >
+                {showPassword3 ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
             </div>
           </div>
 

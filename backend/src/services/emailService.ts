@@ -80,7 +80,7 @@ export const enviarCorreoBienvenida = async (
         <p style="color: #ef4444; font-weight: bold; text-align: center; font-size: 14px;">⚠️ Importante: Por tu seguridad, deberás cambiar tu contraseña en tu primer inicio de sesión.</p>
 
         <div style="text-align: center; margin: 30px 0;">
-          <a href="${loginUrl}" style="background-color: #2A355A; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Iniciar Sesión</a>
+          <a href="${loginUrl}" style="background-color: #a9d42c; color: #1a1a1a; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Iniciar Sesión</a>
         </div>
 
         <p style="font-size: 14px; color: #666;">Saludos,<br>El equipo de InnovaAgile</p>
@@ -122,6 +122,9 @@ export const enviarContratoPdf = async (
         <p>Hola <strong>${nombreUsuario}</strong>,</p>
         <p>Has sellado oficialmente tu Contrato de Excelencia. Nos entusiasma mucho acompañarte en esta transformación.</p>
         <p>Adjunto a este correo encontrarás una copia en PDF de tu contrato firmado, el cual detalla tus compromisos diarios y semanales, junto con las reglas de contingencia.</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${process.env.FRONTEND_URL || 'http://localhost:5173/login'}" style="background-color: #a9d42c; color: #1a1a1a; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Ir al Sistema</a>
+        </div>
         <p style="font-size: 14px; color: #666; margin-top: 30px;">Saludos,<br>El equipo de InnovaAgile</p>
       </div>
     </div>

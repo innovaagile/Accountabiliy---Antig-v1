@@ -454,19 +454,19 @@ const Diagnostico: React.FC = () => {
 
                   if (!item) {
                     return (
-                      <div key={index} className="border-2 border-dashed border-gray-300 bg-gray-50 rounded-2xl p-4 flex items-center gap-4 transition-all h-[90px]">
-                        <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm bg-gray-200 text-gray-500">
+                      <div key={index} className="border-2 border-dashed border-[#A9D42C] bg-sky-50 rounded-2xl p-4 flex items-center gap-4 transition-all h-[90px] shadow-[0_0_15px_rgba(169,212,44,0.15)]">
+                        <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm bg-white border border-[#A9D42C] text-[#A9D42C]">
                           {index + 1}
                         </div>
-                        <span className="text-sm font-semibold tracking-wide text-gray-400">
-                          TOCA UN ELEMENTO ABAJO PARA EL SLOT #{index + 1}
+                        <span className="text-sm font-bold tracking-wide text-[#A9D42C]">
+                          + ARRASTRA AQUÍ TU PRIORIDAD
                         </span>
                       </div>
                     );
                   }
 
                   return (
-                    <div key={index} className="border-2 border-[#A9D42C] bg-[#A9D42C]/5 rounded-2xl p-4 flex items-center justify-between gap-4 shadow-[0_10px_40px_rgba(112,144,176,0.2)] hover:-translate-y-1 transition-all duration-300 min-h-[90px]">
+                    <div key={index} className="border-2 border-[#A9D42C] bg-sky-50 rounded-2xl p-4 flex items-center justify-between gap-4 shadow-[0_10px_40px_rgba(112,144,176,0.2)] hover:-translate-y-1 transition-all duration-300 min-h-[90px]">
                       <div className="flex items-center gap-4 flex-1 pr-2">
                         <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm bg-[#A9D42C] text-white shadow-sm">
                           {index + 1}

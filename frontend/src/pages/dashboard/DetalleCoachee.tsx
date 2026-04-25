@@ -213,8 +213,8 @@ const DetalleCoachee = () => {
         setProcessingTarea(true);
         try {
             const endpoint = tareaModalState.mode === 'EDIT' 
-                ? `/api/coachees/${id}/ciclos/${tareaModalState.cicloId}/tareas/${tareaModalState.data.id}`
-                : `/api/coachees/${id}/ciclos/${tareaModalState.cicloId}/tareas`;
+                ? `/coachees/${id}/ciclos/${tareaModalState.cicloId}/tareas/${tareaModalState.data.id}`
+                : `/coachees/${id}/ciclos/${tareaModalState.cicloId}/tareas`;
             const method = tareaModalState.mode === 'EDIT' ? 'PUT' : 'POST';
 
             const payloadData = {
@@ -253,16 +253,16 @@ const DetalleCoachee = () => {
             };
 
             if (cicloModalState.mode === 'CREATE') {
-                endpoint = `/api/coachees/${id}/ciclos`;
+                endpoint = `/coachees/${id}/ciclos`;
                 method = 'POST';
                 if(cicloModalState.data.fechaFin) {
                     bodyData.fechaFin = cicloModalState.data.fechaFin;
                 }
             } else if (cicloModalState.mode === 'CONTINUE') {
-                endpoint = `/api/coachees/${id}/ciclos/continuar`;
+                endpoint = `/coachees/${id}/ciclos/continuar`;
                 method = 'POST';
             } else if (cicloModalState.mode === 'EDIT') {
-                endpoint = `/api/coachees/${id}/ciclos/${cicloModalState.data.id}`;
+                endpoint = `/coachees/${id}/ciclos/${cicloModalState.data.id}`;
                 method = 'PUT';
                 bodyData.fechaFin = cicloModalState.data.fechaFin;
             }
