@@ -93,7 +93,8 @@ export const createCoachee = async (req: Request, res: Response): Promise<void> 
   try {
     console.log("--- INICIANDO CREACIÓN DE COACHEE ---");
     const { nombre, apellido, email, pais, telefono, empresa, cargo, servicio, frecuencia } = req.body;
-    const exists = await prisma.user.findUnique({ where: { email } });
+    const emailLower = email.toLowerCase();
+    const exists = await prisma.user.findUnique({ where: { email: emailLower } });
     if (exists) { res.status(400).json({ message: 'El coachee ya existe' }); return; }
     
     // Contraseña estándar temporal para fase DEV
@@ -102,7 +103,7 @@ export const createCoachee = async (req: Request, res: Response): Promise<void> 
 
     const newCoachee = await prisma.user.create({
       data: {
-        nombre, apellido, email,
+        nombre, apellido, email: emailLower,
         passwordHash: passwordHash,
         role: 'COACHEE',
         pais, telefono: `+56 ${telefono}`,
@@ -168,13 +169,14 @@ export const actualizarCoachee = async (req: Request, res: Response): Promise<vo
   try {
     const { id } = req.params;
     const { nombre, apellido, email, pais, telefono, empresa, cargo, activo, servicioContratado, frecuenciaRecordatorios, hasDiagnostico } = req.body;
+    const emailLower = email.toLowerCase();
     
     const coacheeActualizado = await prisma.user.update({
       where: { id },
       data: {
         nombre,
         apellido,
-        email,
+        email: emailLower,
         pais,
         telefono,
         empresa,

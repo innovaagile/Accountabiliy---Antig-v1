@@ -90,7 +90,7 @@ export const sellarContrato = async (req: Request, res: Response): Promise<void>
       await Promise.all(tareasPromises);
     }
 
-    res.json({ success: true, message: 'Contrato sellado y enviado exitosamente.' });
+    res.status(200).json({ success: true, message: 'Contrato sellado y enviado exitosamente.', pdfBase64: pdfBuffer.toString('base64') });
   } catch (error: any) {
     console.error('Error al sellar contrato:', error);
     res.status(500).json({ success: false, message: 'Error interno al sellar contrato', error: error.message });

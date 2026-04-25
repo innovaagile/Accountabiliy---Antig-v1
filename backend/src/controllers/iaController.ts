@@ -4,6 +4,7 @@ import { enviarContratoFirmado } from '../services/emailService';
 
 // Instanciar el SDK de Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
 export const generarPlan = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -159,7 +160,28 @@ Reglas obligatorias del JSON:
       }
     });
 
-    const result = await model.generateContent(promptText);
+    let intentos = 0;
+    const MAX_INTENTOS = 3;
+    let result;
+
+    while (intentos < MAX_INTENTOS) {
+      try {
+        result = await model.generateContent(promptText);
+        break;
+      } catch (e: any) {
+        intentos++;
+        console.error(`Fallo en IA, intento ${intentos} de ${MAX_INTENTOS}:`, e.message);
+        if (intentos >= MAX_INTENTOS) {
+          throw e;
+        }
+        await delay(2000);
+      }
+    }
+
+    if (!result) {
+      throw new Error("No se obtuvo respuesta del modelo");
+    }
+
     const response = await result.response;
     let text = response.text();
     

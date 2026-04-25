@@ -27,7 +27,7 @@ const Login: React.FC = () => {
       if (user.role === 'ADMIN') {
         navigate('/dashboard');
       } else if (user.role === 'COACHEE') {
-        if (user.hasCompletedDiagnostic === false) {
+        if (user.hasDiagnostico === false) {
           navigate('/diagnostico');
         } else {
           navigate('/dashboard');

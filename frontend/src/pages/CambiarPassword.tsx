@@ -48,7 +48,7 @@ const CambiarPassword = () => {
       }
 
       // Si tiene diagnostico completado va al dashboard, sino al diagnostico
-      if (user?.hasCompletedDiagnostic) {
+      if (user?.hasDiagnostico === true || user?.hasCompletedDiagnostic === true) {
         navigate('/dashboard');
       } else {
         navigate('/diagnostico');

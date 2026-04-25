@@ -5,10 +5,11 @@ import bcrypt from 'bcrypt';
 
 export const login = async (req: Request, res: Response): Promise<void> => {
   const { email, password } = req.body;
+  const emailLower = email.toLowerCase();
 
   try {
     const user = await prisma.user.findUnique({
-      where: { email },
+      where: { email: emailLower },
       include: { diagnostico: true }
     });
 
@@ -33,7 +34,9 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         nombre: user.nombre,
         email: user.email,
         role: user.role,
-        hasCompletedDiagnostic: user.role === 'ADMIN' ? true : user.diagnostico?.estado === 'COMPLETADO',
+        hasCompletedDiagnostic: user.role === 'ADMIN' ? true : (user.hasDiagnostico === true),
+        hasDiagnostico: user.role === 'ADMIN' ? true : (user.hasDiagnostico === true),
+        contratoFirmado: user.contratoFirmado === true,
         debeCambiarPassword: user.debeCambiarPassword
       }
     });
@@ -64,13 +67,8 @@ export const cambiarPassword = async (req: Request, res: Response): Promise<void
       return;
     }
 
-    let hashedPassword;
-    if (typeof hashPassword === 'function') {
-      hashedPassword = await hashPassword(nuevaPassword);
-    } else {
-      const salt = await bcrypt.genSalt(10);
-      hashedPassword = await bcrypt.hash(nuevaPassword, salt);
-    }
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(nuevaPassword, salt);
 
     await prisma.user.update({
       where: { id: userId },

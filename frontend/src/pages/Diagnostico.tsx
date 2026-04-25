@@ -44,8 +44,25 @@ const Diagnostico: React.FC = () => {
   const [planGenerado, setPlanGenerado] = useState<any>(null);
   const [firma, setFirma] = useState('');
   const isFirmaValida = firma.trim().length > 3;
-  const tipoServicio = (user as any)?.tipoServicio || 'Executive Mastery';
+  const plan = ((user as any)?.servicioContratado || (user as any)?.tipoServicio || '').toLowerCase().trim();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pdfBase64, setPdfBase64] = useState<string | null>(null);
+  const [showIAErrorModal, setShowIAErrorModal] = useState(false);
+
+  const handleDownloadPdf = () => {
+    if (!pdfBase64) return;
+    const byteCharacters = atob(pdfBase64);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: 'application/pdf' });
+    const link = document.createElement('a');
+    link.href = window.URL.createObjectURL(blob);
+    link.download = 'Contrato_InnovaAgile.pdf';
+    link.click();
+  };
 
   const handleSellarCompromiso = async () => {
     if (!isFirmaValida) return;
@@ -59,8 +76,13 @@ const Diagnostico: React.FC = () => {
         body: JSON.stringify({ firma, planGenerado })
       });
 
-      if (!response.ok) {
+      const data = await response.json();
+      if (!response.ok || !data.success) {
         throw new Error('Error al sellar el compromiso');
+      }
+      
+      if (data.pdfBase64) {
+        setPdfBase64(data.pdfBase64);
       }
 
       setStep(7); // Avanza a la vista de éxito
@@ -194,7 +216,7 @@ const Diagnostico: React.FC = () => {
     } catch (error) {
       console.error(error);
       setIsLoadingPlan(false);
-      alert('Ocurrió un error al procesar el diagnóstico con la IA. Por favor intenta de nuevo.');
+      setShowIAErrorModal(true);
     }
   };
 
@@ -902,9 +924,11 @@ const Diagnostico: React.FC = () => {
             <div className="text-center relative max-w-4xl mx-auto">
               <h1 className="text-4xl font-black text-[#1B254B]">MI COMPROMISO FIRMADO</h1>
               <p className="text-gray-500 text-sm mt-2 uppercase tracking-widest">Documento legal de integridad y alto rendimiento</p>
-              <button className="bg-[#A9D42C] text-[#1B254B] font-bold px-6 py-2 rounded-full absolute top-2 right-0 shadow-md hover:bg-[#97C026] transition-colors hidden md:block">
-                DESCARGAR PDF
-              </button>
+              {pdfBase64 && (
+                <button onClick={handleDownloadPdf} className="bg-[#A9D42C] text-[#1B254B] font-bold px-6 py-2 rounded-full absolute top-2 right-0 shadow-md hover:bg-[#97C026] transition-colors hidden md:block">
+                  DESCARGAR PDF
+                </button>
+              )}
             </div>
 
             <div className="bg-white max-w-4xl mx-auto mt-10 h-[600px] overflow-y-auto shadow-[0_20px_50px_rgba(0,0,0,0.1)] rounded-md border border-gray-200 p-8 md:p-16 custom-scrollbar relative">
@@ -973,13 +997,13 @@ const Diagnostico: React.FC = () => {
               </div>
               
               <div className="shrink-0 w-full md:w-auto text-center">
-                {tipoServicio === 'Executive Mastery' ? (
+                {!plan.includes('4s') ? (
                   <a href="https://tidycal.com/cristianbrionesm/sesion-1-coachtoring" target="_blank" rel="noopener noreferrer" className="w-full md:w-auto bg-white text-[#1B254B] font-black rounded-full px-8 py-4 hover:scale-105 transition-transform inline-block shadow-lg">
-                    Agenda tu sesión de diagnóstico
+                    Agenda sesión de kick off
                   </a>
                 ) : (
                   <button onClick={() => navigate('/dashboard')} className="w-full md:w-auto bg-white text-[#1B254B] font-black rounded-full px-8 py-4 hover:scale-105 transition-transform inline-block shadow-lg">
-                    IR AL DASHBOARD <ArrowRight className="w-5 h-5 inline-block ml-1 -mt-1" />
+                    Continuar a mi Dashboard <ArrowRight className="w-5 h-5 inline-block ml-1 -mt-1" />
                   </button>
                 )}
               </div>
@@ -989,6 +1013,39 @@ const Diagnostico: React.FC = () => {
         </>
         )}
       </div>
+
+      {showIAErrorModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1B254B]/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full animate-in zoom-in-95 duration-300">
+            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-6">
+              <AlertTriangle className="h-8 w-8 text-red-600" />
+            </div>
+            <div className="text-center">
+              <h3 className="text-2xl font-bold text-[#1B254B] mb-2">Servidores Saturados</h3>
+              <p className="text-gray-500 mb-8 leading-relaxed">
+                Nuestros motores de Inteligencia Artificial están procesando muchas solicitudes en este momento. Por favor, espera unos segundos y vuelve a intentarlo.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => {
+                  setShowIAErrorModal(false);
+                  handleFinish();
+                }}
+                className="w-full bg-[#A9D42C] hover:bg-[#97C026] text-[#1B254B] font-bold py-4 rounded-xl transition duration-300 shadow-md flex items-center justify-center gap-2"
+              >
+                <Zap className="w-5 h-5" /> REINTENTAR AHORA
+              </button>
+              <button
+                onClick={() => setShowIAErrorModal(false)}
+                className="w-full bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-4 rounded-xl transition duration-300"
+              >
+                CANCELAR
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
