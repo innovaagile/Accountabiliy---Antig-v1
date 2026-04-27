@@ -537,3 +537,109 @@ export const toggleEstadoCoachee = async (req: Request, res: Response): Promise<
     res.status(500).json({ message: 'Error interno del servidor' });
   }
 };
+
+import { obtenerDashboardBff } from '../services/dashboardBffService';
+
+export const obtenerMisAvances = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const dashboardData = await obtenerDashboardBff(id);
+    res.json(dashboardData);
+  } catch (error) {
+    console.error('Error al obtener mis avances:', error);
+    res.status(500).json({ message: 'Error interno del servidor al cargar avances' });
+  }
+};
+
+export const usarComodin = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id: userId, cicloId } = req.params;
+    const { fechaObjetivo } = req.body;
+
+    if (!fechaObjetivo) {
+      res.status(400).json({ message: 'Se requiere fechaObjetivo.' });
+      return;
+    }
+
+    const ciclo = await prisma.ciclo.findUnique({
+      where: { id: cicloId },
+      include: { tareas: true }
+    });
+
+    if (!ciclo) {
+      res.status(404).json({ message: 'Ciclo no encontrado.' });
+      return;
+    }
+
+    // 1. Validar Saldo
+    const totalComodines = Math.round((ciclo.totalDias / 20) * 3) || 3;
+    if (ciclo.comodinesUsados >= totalComodines) {
+      res.status(400).json({ message: 'No te quedan comodines disponibles.' });
+      return;
+    }
+
+    // 2. Validar Fecha Objetivo
+    const objetivo = new Date(fechaObjetivo);
+    objetivo.setHours(0, 0, 0, 0);
+
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    // Calcular día hábil anterior a "hoy"
+    const diaAnterior = new Date(hoy);
+    do {
+      diaAnterior.setDate(diaAnterior.getDate() - 1);
+    } while (diaAnterior.getDay() === 0 || diaAnterior.getDay() === 6);
+
+    const isHoy = objetivo.getTime() === hoy.getTime();
+    const isAyer = objetivo.getTime() === diaAnterior.getTime();
+
+    if (!isHoy && !isAyer) {
+      res.status(400).json({ message: 'El comodín solo se puede usar para hoy o el día hábil anterior.' });
+      return;
+    }
+
+    // 3. Obtener Tareas Activas y Excusarlas
+    const isFriday = objetivo.getDay() === 5;
+    const tareasParaExcusar = ciclo.tareas.filter(t => {
+      if (!t.activa) return false;
+      if (t.periodicidad === 'DIARIA') return true;
+      if (t.periodicidad === 'SEMANAL' && isFriday) return true;
+      return false;
+    });
+
+    for (const tarea of tareasParaExcusar) {
+      await prisma.cumplimiento.upsert({
+        where: {
+          tareaId_userId_fecha: {
+            tareaId: tarea.id,
+            userId,
+            fecha: objetivo
+          }
+        },
+        update: {
+          completada: true,
+          aprendizajeDia: 'Excusado por Comodín'
+        },
+        create: {
+          tareaId: tarea.id,
+          userId,
+          fecha: objetivo,
+          completada: true,
+          aprendizajeDia: 'Excusado por Comodín'
+        }
+      });
+    }
+
+    // 4. Actualizar contador de comodines
+    await prisma.ciclo.update({
+      where: { id: cicloId },
+      data: { comodinesUsados: { increment: 1 } }
+    });
+
+    res.json({ message: 'Comodín usado exitosamente.', comodinesUsados: ciclo.comodinesUsados + 1 });
+  } catch (error) {
+    console.error('Error al usar comodín:', error);
+    res.status(500).json({ message: 'Error interno del servidor al usar el comodín.' });
+  }
+};

@@ -1,5 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { obtenerCoachees, obtenerCoacheePorId, createCoachee, actualizarCoachee, eliminarCoachee, resetearPassword, enviarContrato, crearCicloInteligente, eliminarCiclo, actualizarCiclo, continuarCiclo, toggleEstadoCoachee } from '../controllers/coacheeController';
+import { obtenerCoachees, obtenerCoacheePorId, createCoachee, actualizarCoachee, eliminarCoachee, resetearPassword, enviarContrato, crearCicloInteligente, eliminarCiclo, actualizarCiclo, continuarCiclo, toggleEstadoCoachee, obtenerMisAvances, usarComodin } from '../controllers/coacheeController';
 import { protect, AuthRequest } from '../middlewares/authMiddleware';
 import { crearTarea, actualizarTarea, eliminarTarea, registrarCumplimiento } from '../controllers/tareaController';
 
@@ -25,6 +25,7 @@ const ensureAdminOrSelf = (req: AuthRequest, res: Response, next: NextFunction):
 
 router.get('/', protect, ensureAdmin, obtenerCoachees);
 router.get('/:id', protect, ensureAdminOrSelf, obtenerCoacheePorId);
+router.get('/:id/avances', protect, ensureAdminOrSelf, obtenerMisAvances);
 router.post('/', protect, ensureAdmin, createCoachee);
 router.put('/:id', protect, ensureAdminOrSelf, actualizarCoachee);
 router.patch('/:id/toggle-estado', protect, ensureAdmin, toggleEstadoCoachee);
@@ -38,6 +39,7 @@ router.put('/:id/ciclos/:cicloId', protect, ensureAdminOrSelf, actualizarCiclo);
 router.post('/:id/ciclos/:cicloId/tareas', protect, ensureAdminOrSelf, crearTarea);
 router.put('/:id/ciclos/:cicloId/tareas/:tareaId', protect, ensureAdminOrSelf, actualizarTarea);
 router.patch('/:id/ciclos/:cicloId/tareas/:tareaId', protect, ensureAdminOrSelf, registrarCumplimiento);
-router.delete('/:id/ciclos/:cicloId/tareas/:tareaId', protect, ensureAdmin, eliminarTarea);
+router.delete('/:id/ciclos/:cicloId/tareas/:tareaId', protect, ensureAdminOrSelf, eliminarTarea);
+router.post('/:id/ciclos/:cicloId/comodines/usar', protect, ensureAdminOrSelf, usarComodin);
 
 export default router;

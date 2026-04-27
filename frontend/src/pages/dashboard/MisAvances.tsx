@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { apiFetch } from '../../api/config';
 import { Award, Zap, Activity, Target, Flame, Compass, Quote, Check, Clock, Calendar, Info, ListChecks, BookOpen, Bell, ChevronDown, ChevronUp, Star, Shield, Trophy } from 'lucide-react';
+import { ComodinModal } from '../../components/dashboard/ComodinModal';
+import { formatearFechaOpcionesComodin } from '../../utils/dateUtils';
 
 export const MisAvances = () => {
     const { user } = useAuth();
@@ -12,42 +14,62 @@ export const MisAvances = () => {
     // El estado de recordatorio se inicializa con el useEffect cuando llegan los datos
     const [recordatorio, setRecordatorio] = useState('UNA_VEZ');
 
-    useEffect(() => {
-        if (!user) return;
-        const fetchData = async () => {
-            try {
-                const res = await apiFetch(`/coachees/${user.id}`);
-                const result = await res.json();
-                setData(result);
-                
-                // Inicializar lógica de recordatorios según el plan
-                const plan = result.servicioContratado || user.servicioContratado || "SPRINT_4S";
-                if (plan === 'EXECUTIVE') {
-                    setRecordatorio('CADA_VEZ');
-                } else {
-                    setRecordatorio('UNA_VEZ');
-                }
-            } catch (error) {
-                console.error("Error al cargar datos del coachee:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchData();
-    }, [user]);
+    const [showComodinModal, setShowComodinModal] = useState(false);
+    const [comodinOptions, setComodinOptions] = useState<any>(null);
 
-    if (loading) {
+    const cargarAvances = async () => {
+        try {
+            // La ruta debe ser limpia. El prefijo global (ej. /api) 
+            // debe ser inyectado automáticamente por la utilidad apiFetch.
+            const res = await apiFetch(`/coachees/${user.id}/avances`);
+            const result = await res.json();
+            setData(result);
+            
+            // Inicializar lógica de recordatorios según el plan
+            const plan = result.servicioContratado || user.servicioContratado || "SPRINT_4S";
+            if (plan === 'EXECUTIVE') {
+                setRecordatorio('CADA_VEZ');
+            } else {
+                setRecordatorio('UNA_VEZ');
+            }
+        } catch (error) {
+            console.error("Error al cargar datos de avances:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (user?.id) {
+            cargarAvances();
+        }
+    }, [user?.id]);
+
+    if (!data || loading) {
         return (
             <div className="min-h-screen bg-[#E6E9E1] flex items-center justify-center">
-                <div className="w-10 h-10 border-4 border-[#A9D42C] border-t-transparent rounded-full animate-spin"></div>
+                Cargando tus avances...
             </div>
         );
     }
 
     if (!data) return null;
 
-    const { xpTotal = 0, rachaActual = 0, nivelDetalle } = data;
-    const activeCiclo = data.ciclos?.find((c: any) => c.estado === 'ACTIVO' && c.activo);
+    const { 
+        xpTotal = 0, 
+        rachaActual = 0, 
+        nivelDetalle, 
+        activeCiclo,
+        heatmapDays = [],
+        porcentajeCompromiso = 0,
+        tareasMock = [],
+        sabiduriasMock = [],
+        medallasMock = [],
+        comodinesUsados = 0,
+        totalComodines = 3,
+        completadasHoy = 0,
+        tareasHoy = 3
+    } = data;
 
     // Calcular XP para el siguiente nivel
     const calculateProgress = (xp: number) => {
@@ -63,82 +85,6 @@ export const MisAvances = () => {
     };
 
     const { progress, max, faltante } = calculateProgress(xpTotal);
-
-    // Tracción de Hoy (Simplificada para el MVP visual)
-    const tareasHoy = 3; // Placeholder para la UI (idealmente se calcularía filtrando tareas activas)
-    const completadasHoy = 1; // Placeholder
-    
-    // Comodines
-    const totalComodines = activeCiclo ? Math.round((activeCiclo.totalDias / 20) * 3) : 3;
-    const comodinesUsados = activeCiclo?.comodinesUsados || 0;
-    const cicloProgreso = activeCiclo ? Math.round((activeCiclo.diaHabilActual / activeCiclo.totalDias) * 100) : 0;
-
-    // Lógica para Mapa de Calor (Marco 5)
-    const generateHeatmapDays = () => {
-        if (!activeCiclo) return [];
-        const days = [];
-        const today = new Date();
-        const diasSemanas = ['DOM', 'LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB'];
-        
-        // Mock data forces scenarios
-        const mockScenarios = [
-            { total: 3, realizadas: 1 }, // Día X: < 33% (Rojo)
-            { total: 3, realizadas: 2 }, // Día Y: ~66% (Amarillo)
-            { total: 3, realizadas: 3 }, // Día Z: 100% (Verde)
-            { total: 4, realizadas: 1 }, // 25% (Rojo)
-            { total: 4, realizadas: 4 }, // 100% (Verde)
-            { total: 2, realizadas: 2 }, // 100% (Hoy)
-            { total: 3, realizadas: 0 }, // Futuro
-            { total: 3, realizadas: 0 }  // Futuro
-        ];
-
-        let baseDate = new Date(today);
-        baseDate.setDate(today.getDate() - 5);
-
-        for (let i = 0; i < 8; i++) {
-            // Avanzar fecha saltando fines de semana
-            while (baseDate.getDay() === 0 || baseDate.getDay() === 6) {
-                baseDate.setDate(baseDate.getDate() + 1);
-            }
-            const dateObj = new Date(baseDate);
-
-            const isPast = i < 5;
-            const isToday = i === 5;
-            const isFuture = i > 5;
-            
-            const total = mockScenarios[i].total;
-            const realizadas = isFuture ? 0 : mockScenarios[i].realizadas;
-            const porcentaje = isFuture ? 0 : Math.round((realizadas / total) * 100);
-            
-            let colorClass = 'bg-gray-200';
-            if (!isFuture) {
-                if (porcentaje < 33) colorClass = 'bg-red-500';
-                else if (porcentaje <= 66) colorClass = 'bg-yellow-400';
-                else colorClass = 'bg-[#A9D42C]';
-            }
-
-            days.push({
-                date: dateObj,
-                labelDia: diasSemanas[dateObj.getDay()],
-                labelNum: dateObj.getDate(),
-                isPast,
-                isToday,
-                isFuture,
-                total,
-                realizadas,
-                porcentaje,
-                colorClass
-            });
-            baseDate.setDate(baseDate.getDate() + 1);
-        }
-        return days;
-    };
-    
-    const heatmapDays = generateHeatmapDays();
-    const pastAndToday = heatmapDays.filter(d => d.isPast || d.isToday);
-    const realizadasTotales = pastAndToday.reduce((acc, d) => acc + d.realizadas, 0);
-    const tareasDebidasTotales = pastAndToday.reduce((acc, d) => acc + d.total, 0);
-    const porcentajeCompromiso = tareasDebidasTotales > 0 ? Math.round((realizadasTotales / tareasDebidasTotales) * 100) : 0;
     
     const formatMes = (date: Date) => date.toLocaleString('es-ES', { month: 'long' });
     const fechaInicioStr = activeCiclo ? new Date(activeCiclo.fechaInicio) : new Date();
@@ -151,13 +97,12 @@ export const MisAvances = () => {
         setExpandedTasks(prev => prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]);
     };
 
-    // MOCK DE DATOS: Tareas (Marco 6)
-    const tareasMock = [
-        { id: 1, nombre: "Tomar 2 litros de agua", esHoy: true, completadaHoy: true, semanaRealizadas: 4, semanaTotal: 5, cicloRealizadas: 12, cicloTotal: 17, isSemanal: false },
-        { id: 2, nombre: "Leer 10 páginas", esHoy: true, completadaHoy: false, semanaRealizadas: 1, semanaTotal: 5, cicloRealizadas: 5, cicloTotal: 17, isSemanal: false },
-        { id: 3, nombre: "Meditar 10 mins", esHoy: true, completadaHoy: false, semanaRealizadas: 3, semanaTotal: 5, cicloRealizadas: 10, cicloTotal: 17, isSemanal: false },
-        { id: 4, nombre: "Revisión semanal", esHoy: false, fechaProximoDia: 'VIE 30', completadaHoy: false, semanaRealizadas: 1, semanaTotal: 1, cicloRealizadas: 3, cicloTotal: 3, isSemanal: true }
-    ];
+    const isWeekend = new Date().getDay() === 0 || new Date().getDay() === 6;
+
+    const handleUseWildcard = () => {
+        setComodinOptions(formatearFechaOpcionesComodin());
+        setShowComodinModal(true);
+    };
 
     const getEstadoDiaMessage = (tarea: any) => {
         if (!tarea.esHoy) {
@@ -178,24 +123,18 @@ export const MisAvances = () => {
         return 'text-[#A9D42C]';
     };
 
-    // MOCK DE DATOS: Sabidurías (Marco 7)
-    const sabiduriasMock = [
-        { id: 1, nombre: "Tomar 2 litros de agua", reflexiones: [ { fecha: '12 de Abril', texto: 'Me costó en la mañana, pero logré terminar la botella antes de cenar.' }, { fecha: '14 de Abril', texto: 'Hoy fue más fácil, combiné el agua con rodajas de limón.' } ] },
-        { id: 2, nombre: "Leer 10 páginas", reflexiones: [ { fecha: '13 de Abril', texto: 'Leí un capítulo extra porque la historia estaba interesante.' } ] },
-        { id: 3, nombre: "Meditar 10 mins", reflexiones: [] },
-        { id: 4, nombre: "Revisión semanal", reflexiones: [ { fecha: '15 de Abril', texto: 'Anoté todos mis gastos. Siento más control sobre mi presupuesto.' } ] }
-    ];
+    const medallasGanadas = medallasMock.filter((m: any) => m.ganada);
 
-    // MOCK DE DATOS: Medallas (Marco 9)
-    const medallasMock = [
-        { id: 1, nombre: "Primeros Pasos", descripcion: "Lograste romper la inercia y completaste las tareas de tu primer día.", icono: Star, colorBase: "bg-blue-50", colorIcono: "text-blue-500", ganada: true },
-        { id: 2, nombre: "Semana de Fuego", descripcion: "Alcanzaste una racha de 7 días ininterrumpidos.", icono: Flame, colorBase: "bg-orange-50", colorIcono: "text-orange-500", ganada: true },
-        { id: 3, nombre: "Constancia Pura", descripcion: "Completaste el 80% de tus tareas en la primera mitad del ciclo.", icono: Activity, colorBase: "bg-[#eef7d5]", colorIcono: "text-[#A9D42C]", ganada: false },
-        { id: 4, nombre: "Maestro del Hábito", descripcion: "Conseguiste completar todas tus tareas diarias y semanales durante 14 días.", icono: Shield, colorBase: "bg-purple-50", colorIcono: "text-purple-500", ganada: false },
-        { id: 5, nombre: "Leyenda", descripcion: "Terminaste el ciclo con el 100% de compromiso y sin usar comodines.", icono: Trophy, colorBase: "bg-yellow-50", colorIcono: "text-yellow-500", ganada: false }
-    ];
-
-    const medallasGanadas = medallasMock.filter(m => m.ganada);
+    const getMedalIcon = (iconName: string) => {
+        switch (iconName) {
+            case 'Star': return Star;
+            case 'Flame': return Flame;
+            case 'Activity': return Activity;
+            case 'Shield': return Shield;
+            case 'Trophy': return Trophy;
+            default: return Star;
+        }
+    };
 
     return (
         <div className="min-h-screen bg-[#E6E9E1] text-[#1B254B] font-['Plus_Jakarta_Sans',_sans-serif]">
@@ -302,18 +241,25 @@ export const MisAvances = () => {
                     </div>
                     
                     <div className="flex gap-4 shrink-0">
-                        {Array.from({ length: totalComodines }).map((_, i) => (
-                            <div 
-                                key={i} 
-                                className={`w-14 h-14 rounded-2xl flex items-center justify-center border-2 transition-all ${
-                                    i < comodinesUsados 
-                                        ? 'bg-gray-100 border-gray-200 opacity-50' 
-                                        : 'bg-white border-[#A9D42C] shadow-sm shadow-[#A9D42C]/20'
-                                }`}
-                            >
-                                <Zap className={`w-6 h-6 ${i < comodinesUsados ? 'text-gray-300' : 'text-[#A9D42C] fill-[#A9D42C]'}`} />
-                            </div>
-                        ))}
+                        {Array.from({ length: totalComodines }).map((_, i) => {
+                            const isUsed = i < comodinesUsados;
+                            return (
+                                <button 
+                                    key={i} 
+                                    disabled={isWeekend || isUsed}
+                                    onClick={handleUseWildcard}
+                                    className={`w-14 h-14 rounded-2xl flex items-center justify-center border-2 transition-all ${
+                                        isUsed 
+                                            ? 'bg-gray-100 border-gray-200 opacity-50 cursor-not-allowed' 
+                                            : isWeekend
+                                                ? 'bg-gray-100 border-gray-200 opacity-50 cursor-not-allowed'
+                                                : 'bg-white border-[#A9D42C] shadow-sm shadow-[#A9D42C]/20 hover:bg-[#eef7d5]'
+                                    }`}
+                                >
+                                    <Zap className={`w-6 h-6 ${isUsed ? 'text-gray-300' : 'text-[#A9D42C] fill-[#A9D42C]'}`} />
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
 
@@ -358,7 +304,7 @@ export const MisAvances = () => {
                             </div>
 
                             <div className="flex gap-8 min-w-max items-end relative z-10 pt-8">
-                                {heatmapDays.map((day, idx) => {
+                                {heatmapDays?.map((day: any, idx: number) => {
                                     // Altura base: 2.5rem por cada tarea.
                                     const heightRem = day.total * 2.5;
                                     
@@ -424,7 +370,7 @@ export const MisAvances = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {tareasMock.map((tarea, idx) => {
+                                {tareasMock?.map((tarea: any, idx: number) => {
                                     const semPorcentaje = Math.round((tarea.semanaRealizadas / tarea.semanaTotal) * 100);
                                     const cicloPorcentaje = Math.round((tarea.cicloRealizadas / tarea.cicloTotal) * 100);
 
@@ -464,7 +410,7 @@ export const MisAvances = () => {
                         </p>
 
                         <div className="space-y-4 flex-1">
-                            {sabiduriasMock.map((tarea) => {
+                            {sabiduriasMock?.map((tarea: any) => {
                                 const isExpanded = expandedTasks.includes(tarea.id);
                                 return (
                                     <div key={tarea.id} className="border border-gray-100 rounded-xl overflow-hidden bg-gray-50/30">
@@ -485,7 +431,7 @@ export const MisAvances = () => {
                                             <div className="px-4 pb-4 pt-2 border-t border-gray-100 bg-white">
                                                 {tarea.reflexiones.length > 0 ? (
                                                     <div className="space-y-3">
-                                                        {tarea.reflexiones.map((ref, idx) => (
+                                                        {tarea.reflexiones?.map((ref: any, idx: number) => (
                                                             <div key={idx} className="bg-gray-50 p-3 rounded-lg border border-gray-100">
                                                                 <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider mb-1 block">
                                                                     {ref.fecha}
@@ -592,7 +538,7 @@ export const MisAvances = () => {
                         ) : (
                             <div className="w-full flex flex-wrap justify-center items-center gap-8 relative z-10">
                                 {medallasGanadas.map(m => {
-                                    const IconComponent = m.icono;
+                                    const IconComponent = getMedalIcon(m.icono);
                                     return (
                                         <div key={m.id} className="flex flex-col items-center group">
                                             <div className={`w-20 h-20 rounded-full flex items-center justify-center shadow-md mb-3 transition-transform group-hover:scale-110 ${m.colorBase}`}>
@@ -616,8 +562,8 @@ export const MisAvances = () => {
                             Guía de Trofeos
                         </h4>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                            {medallasMock.map(m => {
-                                const IconComponent = m.icono;
+                            {medallasMock.map((m: any) => {
+                                const IconComponent = getMedalIcon(m.icono);
                                 const isLocked = !m.ganada;
                                 
                                 return (
@@ -643,6 +589,15 @@ export const MisAvances = () => {
                 </div>
 
             </div>
+
+            <ComodinModal 
+                isOpen={showComodinModal}
+                onClose={() => setShowComodinModal(false)}
+                comodinOptions={comodinOptions}
+                coacheeId={user?.id || ''}
+                cicloId={activeCiclo?.id}
+                onSuccess={cargarAvances}
+            />
         </div>
     );
 };

@@ -93,7 +93,15 @@ export const actualizarTarea = async (req: Request, res: Response): Promise<void
 
 export const eliminarTarea = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { tareaId } = req.params;
+    // Tarea 2: Confirmar recepción de los tres IDs
+    const { id, cicloId, tareaId } = req.params;
+    
+    // Verificamos que al menos venga el tareaId
+    if (!tareaId) {
+       res.status(400).json({ message: 'Se requiere tareaId' });
+       return;
+    }
+
     await prisma.tarea.delete({
       where: { id: tareaId }
     });

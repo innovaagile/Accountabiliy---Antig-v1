@@ -1,9 +1,14 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { LogOut } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const CoacheeTopBar = () => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const isMisAvances = location.pathname.includes('/avances');
 
   return (
     <div className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-50 w-full">
@@ -16,10 +21,16 @@ const CoacheeTopBar = () => {
         
         {/* Centro: Navegación */}
         <div className="hidden md:flex gap-8 h-full">
-          <button className="text-[#A9D42C] font-black text-sm uppercase tracking-wide border-b-2 border-[#A9D42C] h-full flex items-center">
+          <button 
+            onClick={() => navigate('/dashboard')}
+            className={`${!isMisAvances ? 'text-[#A9D42C] border-b-2 border-[#A9D42C]' : 'text-gray-400 hover:text-[#1B254B]'} font-black text-sm uppercase tracking-wide transition-colors h-full flex items-center`}
+          >
             Marca tus tareas
           </button>
-          <button className="text-gray-400 font-bold text-sm hover:text-[#1B254B] uppercase tracking-wide transition-colors h-full flex items-center">
+          <button 
+            onClick={() => navigate('/dashboard/avances')}
+            className={`${isMisAvances ? 'text-[#A9D42C] border-b-2 border-[#A9D42C]' : 'text-gray-400 hover:text-[#1B254B]'} font-bold text-sm uppercase tracking-wide transition-colors h-full flex items-center`}
+          >
             Mis avances
           </button>
           <button className="text-gray-400 font-bold text-sm hover:text-[#1B254B] uppercase tracking-wide transition-colors h-full flex items-center">

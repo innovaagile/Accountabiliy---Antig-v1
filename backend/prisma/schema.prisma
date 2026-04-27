@@ -42,6 +42,7 @@ model User {
 
   xpTotal           Int             @default(0)
   rachaActual       Int             @default(0)
+  medallasDesbloqueadas String[]    @default([])
 
   coachId           String?
   coach             User?           @relation("CoachToCoachee", fields: [coachId], references: [id])

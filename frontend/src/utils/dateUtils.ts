@@ -22,3 +22,32 @@ export const contarDiasHabiles = (fechaInicio: string | Date, fechaFin: string |
     
     return dias;
 };
+
+export const obtenerDiaHabilAnterior = (fechaActual: Date = new Date()): Date => {
+  const diaAnterior = new Date(fechaActual);
+  diaAnterior.setHours(0, 0, 0, 0);
+
+  do {
+    diaAnterior.setDate(diaAnterior.getDate() - 1);
+  } while (diaAnterior.getDay() === 0 || diaAnterior.getDay() === 6);
+
+  return diaAnterior;
+};
+
+export const formatearFechaOpcionesComodin = () => {
+  const hoy = new Date();
+  const ayer = obtenerDiaHabilAnterior(hoy);
+
+  const opciones = { month: 'short', day: 'numeric' } as const;
+
+  return {
+    hoy: {
+      etiqueta: `Hoy, ${hoy.toLocaleDateString('es-ES', opciones)}`,
+      valor: hoy.toISOString()
+    },
+    ayer: {
+      etiqueta: `Ayer, ${ayer.toLocaleDateString('es-ES', opciones)}`,
+      valor: ayer.toISOString()
+    }
+  };
+};

@@ -7,12 +7,16 @@ import {
   ChevronRight, Check, Briefcase, Smile, MessageCircle, AlertTriangle 
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
+import { formatearFechaOpcionesComodin } from '../../utils/dateUtils';
+import { ComodinModal } from '../../components/dashboard/ComodinModal';
 
 const CoacheeDashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [coachee, setCoachee] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showComodinModal, setShowComodinModal] = useState(false);
+  const [comodinOptions, setComodinOptions] = useState<any>(null);
 
   // Normalizar hoy para comparar cumplimientos
   const hoyStr = new Date().toISOString().split('T')[0];
@@ -88,18 +92,9 @@ const CoacheeDashboard = () => {
     }
   };
 
-  const handleUseWildcard = async () => {
-    // Evita la mutación doble en modo estricto creando un objeto inmutable
-    setCoachee((prev: any) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        ciclos: prev.ciclos.map((c: any) => 
-          c.activo ? { ...c, comodinesUsados: c.comodinesUsados + 1 } : c
-        )
-      };
-    });
-    // Se debería enviar al backend si tuviéramos un endpoint para comodines
+  const handleUseWildcard = () => {
+    setComodinOptions(formatearFechaOpcionesComodin());
+    setShowComodinModal(true);
   };
 
   if (loading) {
@@ -210,7 +205,8 @@ const CoacheeDashboard = () => {
   };
 
   return (
-    <div className="w-full animate-in fade-in duration-500">
+    <>
+      <div className="w-full animate-in fade-in duration-500">
       <div className="mb-10 mt-8">
         <h1 className="text-3xl font-black text-[#1B254B]">
             Hola, {user?.nombre || 'Coachee'} 👋
@@ -289,7 +285,7 @@ const CoacheeDashboard = () => {
                             : 'bg-white/10 text-white hover:bg-white/20'
                       }`}
                     >
-                      <Star className={`w-6 h-6 ${isUsed ? 'fill-current' : ''}`} />
+                      <Zap className={`w-6 h-6 ${isUsed ? 'fill-current' : ''}`} />
                     </button>
                   );
                 })}
@@ -349,6 +345,16 @@ const CoacheeDashboard = () => {
           </div>
         </div>
       </div>
+
+      <ComodinModal 
+        isOpen={showComodinModal}
+        onClose={() => setShowComodinModal(false)}
+        comodinOptions={comodinOptions}
+        coacheeId={user?.id || ''}
+        cicloId={activeCiclo?.id}
+        onSuccess={fetchCoacheeData}
+      />
+    </>
   );
 };
 
