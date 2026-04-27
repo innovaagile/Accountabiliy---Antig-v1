@@ -132,11 +132,12 @@ const DetalleCoachee = () => {
     };
 
     const openCicloModal = (mode: 'CREATE' | 'CONTINUE' | 'EDIT', cicloToEdit?: Ciclo, defaultName?: string) => {
-        let defaultData = {
+        let defaultData: any = {
             id: '',
             nombre: `Ciclo ${coachee?.ciclos ? coachee.ciclos.length + 1 : 1}`,
             fechaInicio: new Date().toISOString().split('T')[0],
-            fechaFin: '' // No usado en CREATE/CONTINUE visualmente, pero alojado aquí
+            fechaFin: '', // No usado en CREATE/CONTINUE visualmente, pero alojado aquí
+            totalDias: 20
         };
 
         if (mode === 'EDIT' && cicloToEdit) {
@@ -144,7 +145,8 @@ const DetalleCoachee = () => {
                 id: cicloToEdit.id,
                 nombre: cicloToEdit.nombre || defaultName || 'Ciclo',
                 fechaInicio: new Date(cicloToEdit.fechaInicio).toISOString().split('T')[0],
-                fechaFin: new Date(cicloToEdit.fechaFin).toISOString().split('T')[0]
+                fechaFin: new Date(cicloToEdit.fechaFin).toISOString().split('T')[0],
+                totalDias: cicloToEdit.totalDias || 20
             };
         } else if (mode === 'CONTINUE') {
             defaultData.nombre = `Ciclo ${coachee?.ciclos ? coachee.ciclos.length + 1 : 1}`;
@@ -247,7 +249,7 @@ const DetalleCoachee = () => {
         try {
             let endpoint = '';
             let method = '';
-            const bodyData: Record<string, string> = {
+            const bodyData: Record<string, any> = {
                 nombre: cicloModalState.data.nombre,
                 fechaInicio: cicloModalState.data.fechaInicio
             };
@@ -265,7 +267,10 @@ const DetalleCoachee = () => {
                 endpoint = `/coachees/${id}/ciclos/${cicloModalState.data.id}`;
                 method = 'PUT';
                 bodyData.fechaFin = cicloModalState.data.fechaFin;
+                bodyData.totalDias = cicloModalState.data.totalDias;
             }
+
+            console.log("Enviando PUT:", bodyData);
 
             const res = await apiFetch(endpoint, {
                 method,
@@ -881,10 +886,16 @@ const DetalleCoachee = () => {
                                     type="date" 
                                     className="w-full px-4 py-2.5 rounded-xl border-none bg-[#F4F7FE] focus:ring-2 focus:ring-[#A9D42C] outline-none text-sm font-bold text-[#1B254B]"
                                     value={cicloModalState.data.fechaInicio}
-                                    onChange={(e) => setCicloModalState({
-                                        ...cicloModalState, 
-                                        data: { ...cicloModalState.data, fechaInicio: e.target.value }
-                                    })}
+                                    onChange={(e) => {
+                                        const newVal = e.target.value;
+                                        const calculated = (newVal && cicloModalState.data.fechaFin) 
+                                            ? contarDiasHabiles(newVal, cicloModalState.data.fechaFin) 
+                                            : cicloModalState.data.totalDias;
+                                        setCicloModalState({
+                                            ...cicloModalState, 
+                                            data: { ...cicloModalState.data, fechaInicio: newVal, totalDias: calculated }
+                                        });
+                                    }}
                                 />
                             </div>
                             
@@ -896,10 +907,26 @@ const DetalleCoachee = () => {
                                             type="date" 
                                             className="w-full px-4 py-2.5 rounded-xl border-none bg-[#F4F7FE] focus:ring-2 focus:ring-[#A9D42C] outline-none text-sm font-bold text-[#1B254B]"
                                             value={cicloModalState.data.fechaFin}
-                                            onChange={(e) => setCicloModalState({
-                                                ...cicloModalState, 
-                                                data: { ...cicloModalState.data, fechaFin: e.target.value }
-                                            })}
+                                            onChange={(e) => {
+                                                const newVal = e.target.value;
+                                                const calculated = (cicloModalState.data.fechaInicio && newVal) 
+                                                    ? contarDiasHabiles(cicloModalState.data.fechaInicio, newVal) 
+                                                    : cicloModalState.data.totalDias;
+                                                setCicloModalState({
+                                                    ...cicloModalState, 
+                                                    data: { ...cicloModalState.data, fechaFin: newVal, totalDias: calculated }
+                                                });
+                                            }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1.5 block">Total de Días Hábiles</label>
+                                        <input 
+                                            type="number" 
+                                            disabled
+                                            className="w-full px-4 py-2.5 rounded-xl border-none bg-gray-100 text-gray-500 outline-none text-sm font-bold cursor-not-allowed"
+                                            value={cicloModalState.data.totalDias || 0}
+                                            readOnly
                                         />
                                     </div>
                                     <p className="text-[10px] text-gray-400 font-bold leading-relaxed pt-2">

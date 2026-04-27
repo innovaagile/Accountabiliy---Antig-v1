@@ -315,7 +315,7 @@ const CoacheeDashboard = () => {
                 <AlertTriangle className="w-4 h-4 text-amber-500" /> ¿Bloqueado?
               </h3>
               <p className="text-xs text-gray-500 leading-relaxed mb-4">
-                Agenda una sesión de Coaching personal con Cristián Briones para resolver bloqueos o cualquier duda que tengas.
+                Agenda una sesión táctica de 30 minutos por US$90 para resolver bloqueos de ejecución.
               </p>
               <a 
                 href="https://tidycal.com/cristianbrionesm/mentoring-1we20dr-368lgre-m7vwq5l"

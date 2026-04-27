@@ -102,3 +102,40 @@ export const eliminarTarea = async (req: Request, res: Response): Promise<void> 
     res.status(500).json({ message: 'Error interno del servidor.' });
   }
 };
+
+export const registrarCumplimiento = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id: userId, tareaId } = req.params;
+    const { completada, aprendizajeDia } = req.body;
+    
+    // Simplificación para el MVP: upsert el cumplimiento para "hoy" (normalizado)
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    const cumplimiento = await prisma.cumplimiento.upsert({
+      where: {
+        tareaId_userId_fecha: {
+          tareaId,
+          userId,
+          fecha: hoy
+        }
+      },
+      update: {
+        completada: completada !== undefined ? completada : undefined,
+        aprendizajeDia: aprendizajeDia !== undefined ? aprendizajeDia : undefined
+      },
+      create: {
+        tareaId,
+        userId,
+        fecha: hoy,
+        completada: completada || false,
+        aprendizajeDia: aprendizajeDia || ''
+      }
+    });
+
+    res.json(cumplimiento);
+  } catch (error) {
+    console.error('Error al registrar cumplimiento:', error);
+    res.status(500).json({ message: 'Error interno del servidor.' });
+  }
+};

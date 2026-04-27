@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt';
 import prisma from '../config/db';
 import { enviarCorreoReseteo, enviarCorreoContrato } from '../utils/emailService';
 import { enviarCorreoBienvenida } from '../services/emailService';
-import { calcularFechaFinHabil } from '../utils/dateUtils';
+import { calcularFechaFinHabil, calcularDiaHabilActual } from '../utils/dateUtils';
 
 export const obtenerCoachees = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -70,7 +70,13 @@ export const obtenerCoacheePorId = async (req: Request, res: Response): Promise<
       },
       include: {
         ciclos: {
-          include: { tareas: true },
+          include: { 
+            tareas: {
+              include: {
+                cumplimientos: true
+              }
+            }
+          },
           orderBy: { id: 'desc' }
         },
         contracts: true
@@ -80,6 +86,15 @@ export const obtenerCoacheePorId = async (req: Request, res: Response): Promise<
     if (!coachee) {
       res.status(404).json({ message: 'Coachee no encontrado' });
       return;
+    }
+    
+    if (coachee.ciclos && coachee.ciclos.length > 0) {
+      coachee.ciclos = coachee.ciclos.map(ciclo => {
+        if (ciclo.activo) {
+          (ciclo as any).diaHabilActual = calcularDiaHabilActual(ciclo.fechaInicio, new Date());
+        }
+        return ciclo;
+      });
     }
     
     res.json(coachee);
@@ -199,6 +214,24 @@ export const actualizarCoachee = async (req: Request, res: Response): Promise<vo
         hasDiagnostico
       }
     });
+    
+    if (servicioContratado) {
+      const planNormalizado = servicioContratado.toLowerCase().trim();
+      let nuevoTotalDias = 28;
+
+      if (planNormalizado.includes('executive')) {
+        nuevoTotalDias = 40;
+      } else if (planNormalizado.includes('4s')) {
+        nuevoTotalDias = 28;
+      } else if (planNormalizado.includes('gold')) {
+        nuevoTotalDias = 59;
+      }
+
+      await prisma.ciclo.updateMany({
+        where: { userId: id, estado: 'ACTIVO' },
+        data: { totalDias: nuevoTotalDias }
+      });
+    }
     
     res.json(coacheeActualizado);
   } catch (error) {
@@ -344,13 +377,21 @@ export const actualizarCiclo = async (req: Request, res: Response): Promise<void
         const { cicloId } = req.params;
         const { nombre, fechaInicio, fechaFin } = req.body;
         
+        console.log("Recibido en Backend (actualizarCiclo):", req.body);
+        
+        const fechaInicioDate = new Date(fechaInicio);
+        const fechaFinDate = new Date(fechaFin);
+        
+        const updateData: any = {
+            nombre,
+            fechaInicio: fechaInicioDate,
+            fechaFin: fechaFinDate,
+            totalDias: calcularDiaHabilActual(fechaInicioDate, fechaFinDate)
+        };
+
         await prisma.ciclo.update({
             where: { id: cicloId },
-            data: {
-                nombre,
-                fechaInicio: new Date(fechaInicio),
-                fechaFin: new Date(fechaFin)
-            }
+            data: updateData
         });
         res.json({ message: 'Ciclo actualizado correctamente' });
     } catch (error) {
