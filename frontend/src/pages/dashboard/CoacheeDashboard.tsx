@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { apiFetch } from '../../api/config';
 import { 
@@ -8,6 +9,7 @@ import {
 import * as LucideIcons from 'lucide-react';
 
 const CoacheeDashboard = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [coachee, setCoachee] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -304,7 +306,10 @@ const CoacheeDashboard = () => {
               </div>
               <h3 className="text-lg font-black text-[#1B254B] mb-2">Mi Avance</h3>
               <p className="text-sm text-gray-500 mb-5">Visualiza tu mapa de cumplimiento y rachas.</p>
-              <button className="w-full py-3 bg-[#A9D42C] hover:bg-lime-500 text-[#1B254B] font-bold rounded-xl transition-colors text-sm shadow-md">
+              <button 
+                onClick={() => navigate('/dashboard/avances')}
+                className="w-full py-3 bg-[#A9D42C] hover:bg-lime-500 text-[#1B254B] font-bold rounded-xl transition-colors text-sm shadow-md"
+              >
                 Ver mis logros
               </button>
             </div>

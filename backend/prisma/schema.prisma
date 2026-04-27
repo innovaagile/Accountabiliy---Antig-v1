@@ -40,6 +40,9 @@ model User {
   servicioContratado String?          @default("SPRINT_4S")
   frecuenciaRecordatorios String?
 
+  xpTotal           Int             @default(0)
+  rachaActual       Int             @default(0)
+
   coachId           String?
   coach             User?           @relation("CoachToCoachee", fields: [coachId], references: [id])
   coachees          User[]          @relation("CoachToCoachee")

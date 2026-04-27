@@ -7,6 +7,7 @@ import DashboardHome from './pages/dashboard/DashboardHome';
 import GestionFrases from './pages/dashboard/GestionFrases';
 import DetalleCoachee from './pages/dashboard/DetalleCoachee';
 import CambiarPassword from './pages/CambiarPassword';
+import { MisAvances } from './pages/dashboard/MisAvances';
 
 import Diagnostico from './pages/Diagnostico';
 
@@ -53,6 +54,7 @@ function App() {
             <Route path="configuracion" element={<div className="p-4 bg-white rounded shadow-sm">Configuración (Construcción)</div>} />
             <Route path="frases" element={<GestionFrases />} />
             <Route path="coachee/:id" element={<DetalleCoachee />} />
+            <Route path="avances" element={<MisAvances />} />
 
           </Route>
 

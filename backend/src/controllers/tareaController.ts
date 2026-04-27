@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import prisma from '../config/db';
+import { calcularXPObtenida } from '../services/gamificationService';
 
 export const crearTarea = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -108,9 +109,26 @@ export const registrarCumplimiento = async (req: Request, res: Response): Promis
     const { id: userId, tareaId } = req.params;
     const { completada, aprendizajeDia } = req.body;
     
-    // Simplificación para el MVP: upsert el cumplimiento para "hoy" (normalizado)
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
+
+    // Obtener tarea y usuario para gamificación
+    const tarea = await prisma.tarea.findUnique({ where: { id: tareaId } });
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+
+    if (!tarea || !user) {
+      res.status(404).json({ message: 'Tarea o Usuario no encontrado.' });
+      return;
+    }
+
+    // Buscar si ya existía el cumplimiento
+    const cumplimientoPrevio = await prisma.cumplimiento.findUnique({
+      where: {
+        tareaId_userId_fecha: { tareaId, userId, fecha: hoy }
+      }
+    });
+
+    const wasCompleted = cumplimientoPrevio?.completada || false;
 
     const cumplimiento = await prisma.cumplimiento.upsert({
       where: {
@@ -132,6 +150,20 @@ export const registrarCumplimiento = async (req: Request, res: Response): Promis
         aprendizajeDia: aprendizajeDia || ''
       }
     });
+
+    // --- GAMIFICACIÓN ---
+    // Si la tarea se acaba de marcar como completada (y no lo estaba antes)
+    if (completada && !wasCompleted) {
+      const xpGanada = calcularXPObtenida(tarea, cumplimiento, user.rachaActual);
+      
+      await prisma.user.update({
+        where: { id: userId },
+        data: { 
+          xpTotal: { increment: xpGanada },
+          rachaActual: { increment: 1 } // Sumamos +1 a la racha por hacer "al menos 1 tarea"
+        }
+      });
+    }
 
     res.json(cumplimiento);
   } catch (error) {

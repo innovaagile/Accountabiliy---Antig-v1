@@ -1,5 +1,5 @@
 import React from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 import CoacheeTopBar from './CoacheeTopBar';
@@ -7,13 +7,15 @@ import { useAuth } from '../../context/AuthContext';
 
 const MainLayout = () => {
   const { user } = useAuth();
+  const location = useLocation();
   const isCoachee = user?.role === 'COACHEE';
+  const isMisAvances = location.pathname.includes('/avances');
 
   if (isCoachee) {
     return (
-      <div className="min-h-screen bg-[#EAECE6] flex flex-col">
+      <div className={`min-h-screen flex flex-col ${isMisAvances ? 'bg-[#E6E9E1]' : 'bg-[#EAECE6]'}`}>
         <CoacheeTopBar />
-        <main className="flex-1 w-full mt-8 px-4 lg:px-8 max-w-7xl mx-auto">
+        <main className={`flex-1 w-full ${isMisAvances ? '' : 'mt-8 px-4 lg:px-8 max-w-7xl mx-auto'}`}>
           <Outlet />
         </main>
       </div>

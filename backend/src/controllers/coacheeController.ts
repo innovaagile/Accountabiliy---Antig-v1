@@ -4,6 +4,7 @@ import prisma from '../config/db';
 import { enviarCorreoReseteo, enviarCorreoContrato } from '../utils/emailService';
 import { enviarCorreoBienvenida } from '../services/emailService';
 import { calcularFechaFinHabil, calcularDiaHabilActual } from '../utils/dateUtils';
+import { calcularNivel } from '../services/gamificationService';
 
 export const obtenerCoachees = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -97,7 +98,14 @@ export const obtenerCoacheePorId = async (req: Request, res: Response): Promise<
       });
     }
     
-    res.json(coachee);
+    // Inyectar detalle de nivel de gamificación
+    const nivelDetalle = calcularNivel(coachee.xpTotal || 0);
+    const coacheeResponse = {
+      ...coachee,
+      nivelDetalle
+    };
+    
+    res.json(coacheeResponse);
   } catch (error) {
     console.error('Error al obtener coachee por id:', error);
     res.status(500).json({ message: 'Error interno del servidor' });
