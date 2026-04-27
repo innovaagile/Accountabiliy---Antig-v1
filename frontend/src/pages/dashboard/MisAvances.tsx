@@ -118,9 +118,17 @@ export const MisAvances = () => {
     };
 
     const getColorClass = (porcentaje: number) => {
-        if (porcentaje < 33) return 'text-red-500';
-        if (porcentaje <= 66) return 'text-yellow-500';
-        return 'text-[#A9D42C]';
+        if (porcentaje > 0 && porcentaje < 34) return 'text-red-500';
+        if (porcentaje >= 34 && porcentaje < 68) return 'text-yellow-500';
+        if (porcentaje >= 68) return 'text-[#A9D42C]';
+        return 'text-gray-400'; // Default para 0%
+    };
+
+    const getBarColor = (porcentaje: number) => {
+        if (porcentaje <= 0) return "bg-gray-200"; // Vacío
+        if (porcentaje > 0 && porcentaje < 34) return "bg-red-500"; 
+        if (porcentaje >= 34 && porcentaje < 68) return "bg-yellow-500";
+        return "bg-[#A9D42C]"; // 68 a 100
     };
 
     const medallasGanadas = medallasMock.filter((m: any) => m.ganada);
@@ -304,9 +312,12 @@ export const MisAvances = () => {
                             </div>
 
                             <div className="flex gap-8 min-w-max items-end relative z-10 pt-8">
-                                {heatmapDays?.map((day: any, idx: number) => {
-                                    // Altura base: 2.5rem por cada tarea.
-                                    const heightRem = day.total * 2.5;
+                                {(() => {
+                                    const maxTareas = Math.max(...(heatmapDays || []).map((d: any) => d.total), 1);
+                                    
+                                    return heatmapDays?.map((day: any, idx: number) => {
+                                        // Altura visual proporcional al máximo de tareas del ciclo. Techo de 10rem.
+                                        const heightRem = day.total > 0 ? (day.total / maxTareas) * 10 : 0.5; // Altura mínima de 0.5rem si es 0
                                     
                                     return (
                                         <div key={idx} className="flex flex-col items-center w-[11%] min-w-[70px] max-w-[90px] shrink-0">
@@ -318,16 +329,16 @@ export const MisAvances = () => {
 
                                             {/* Barra Vertical (Altura Dinámica según total de tareas) */}
                                             <div 
-                                                className="w-14 bg-gray-100 rounded-full overflow-hidden relative shadow-inner mb-4 flex items-end justify-center"
+                                                className={`w-14 bg-gray-100 rounded-full overflow-hidden relative shadow-inner mb-4 flex items-end justify-center ${day.total === 0 ? 'opacity-30' : ''}`}
                                                 style={{ height: `${heightRem}rem` }}
                                             >
                                                 <div 
-                                                    className={`w-full rounded-full transition-all duration-500 flex flex-col justify-end pb-2 ${day.colorClass}`}
-                                                    style={{ height: day.isFuture ? '0%' : `${day.porcentaje}%` }}
+                                                    className={`w-full rounded-full transition-all duration-500 flex flex-col justify-end pb-2 ${getBarColor(day.porcentaje)}`}
+                                                    style={{ height: day.isFuture ? '0%' : `${Math.min(day.porcentaje, 100)}%` }}
                                                 >
                                                     {!day.isFuture && day.porcentaje > 20 && (
                                                         <span className="text-[10px] font-black text-white text-center w-full block drop-shadow-sm">
-                                                            {day.porcentaje}%
+                                                            {Math.min(day.porcentaje, 100)}%
                                                         </span>
                                                     )}
                                                 </div>
@@ -346,8 +357,9 @@ export const MisAvances = () => {
                                             </div>
                                         </div>
                                     );
-                                })}
-                            </div>
+                                });
+                            })()}
+                        </div>
                         </div>
                     </div>
                 )}

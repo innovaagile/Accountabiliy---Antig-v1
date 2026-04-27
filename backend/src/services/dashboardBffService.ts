@@ -40,9 +40,17 @@ export const generarHeatmap = async (cicloId: string, fechaInicio: Date, fechaFi
             let realizadas = 0;
             
             for (const tarea of tareas) {
-                // Simplificación de tareas: asumir todas aplican si no tienen diaSemana o es mensual
-                // TODO: lógica precisa según periodicidad
-                total++;
+                // Solo contar tareas activas
+                if (!tarea.activa) continue;
+
+                // Lógica de si la tarea aplica a este día (igual que Tracción)
+                let appliesToThisDay = false;
+                if (tarea.periodicidad === 'DIARIA') appliesToThisDay = true;
+                if (tarea.periodicidad === 'SEMANAL' && baseDate.getDay() === 5) appliesToThisDay = true;
+
+                if (appliesToThisDay) {
+                    total++;
+                }
                 
                 const cumplido = tarea.cumplimientos.find(c => {
                     const cDate = new Date(c.fecha);
@@ -50,16 +58,22 @@ export const generarHeatmap = async (cicloId: string, fechaInicio: Date, fechaFi
                     return cDate.getTime() === baseDate.getTime() && c.completada;
                 });
                 
-                if (cumplido) realizadas++;
+                // Las realizadas se suman solo si la tarea aplica a este día
+                // para evitar porcentajes mayores al 100% (ej. 4/3).
+                if (cumplido && appliesToThisDay) realizadas++;
             }
             
             const porcentaje = total > 0 ? (isFuture ? 0 : Math.round((realizadas / total) * 100)) : 0;
             
-            let colorClass = 'bg-gray-200';
+            let colorClass = 'bg-gray-200'; // Color por defecto (vacío o 0%)
             if (!isFuture && total > 0) {
-                if (porcentaje < 33) colorClass = 'bg-red-500';
-                else if (porcentaje <= 66) colorClass = 'bg-yellow-400';
-                else colorClass = 'bg-[#A9D42C]';
+                if (porcentaje > 0 && porcentaje < 34) {
+                    colorClass = 'bg-red-500';
+                } else if (porcentaje >= 34 && porcentaje < 68) {
+                    colorClass = 'bg-yellow-500';
+                } else if (porcentaje >= 68) {
+                    colorClass = 'bg-[#A9D42C]'; // corporate green
+                }
             }
 
             heatmapDays.push({
