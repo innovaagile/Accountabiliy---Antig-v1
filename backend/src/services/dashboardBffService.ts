@@ -326,37 +326,6 @@ export const obtenerDashboardBff = async (userId: string) => {
         sabidurias = await extraerSabidurias(activeCiclo.id);
     }
 
-    /**
-     * Calcula la racha de días hábiles seguidos con al menos 1 tarea realizada.
-     * @param heatmapDays Arreglo de días generados para el mapa de calor
-     * @returns Número entero con la racha actual
-     */
-    const calcularRachaReal = (heatmapDays: any[]): number => {
-      let racha = 0;
-      
-      // 1. Filtrar solo los días evaluables: los que ya pasaron y el día de hoy
-      const diasEvaluables = heatmapDays.filter(dia => dia.isPast || dia.isToday);
-      
-      // 2. Ordenar cronológicamente inverso (de hoy hacia el pasado)
-      const diasEnReversa = [...diasEvaluables].reverse();
-
-      for (const dia of diasEnReversa) {
-        if (dia.realizadas > 0) {
-          // Si hizo al menos 1 tarea, suma a la racha
-          racha++;
-        } else if (dia.isPast) {
-          // Si el día YA PASÓ y no hizo tareas, la racha se rompe definitivamente
-          break;
-        } else if (dia.isToday && dia.realizadas === 0) {
-          // Si es HOY y aún no hace tareas, no rompe la racha de ayer (aún tiene tiempo), 
-          // pero tampoco suma. Continuamos evaluando el día de ayer.
-          continue;
-        }
-      }
-      
-      return racha;
-    };
-
     const rachaActual = calcularRachaReal(heatmapInfo.heatmapDays);
     user.rachaActual = rachaActual; // Inject the real streak before evaluating medals
 
@@ -391,3 +360,29 @@ export const obtenerDashboardBff = async (userId: string) => {
         tareasHoy
     };
 };
+
+export const calcularRachaReal = (heatmapDays: any[]): number => {
+    let racha = 0;
+    
+    // 1. Filtrar solo los días evaluables: los que ya pasaron y el día de hoy
+    const diasEvaluables = heatmapDays.filter(dia => dia.isPast || dia.isToday);
+    
+    // 2. Ordenar cronológicamente inverso (de hoy hacia el pasado)
+    const diasEnReversa = [...diasEvaluables].reverse();
+  
+    for (const dia of diasEnReversa) {
+      if (dia.realizadas > 0) {
+        // Si hizo al menos 1 tarea, suma a la racha
+        racha++;
+      } else if (dia.isPast) {
+        // Si el día YA PASÓ y no hizo tareas, la racha se rompe definitivamente
+        break;
+      } else if (dia.isToday && dia.realizadas === 0) {
+        // Si es HOY y aún no hace tareas, no rompe la racha de ayer (aún tiene tiempo), 
+        // pero tampoco suma. Continuamos evaluando el día de ayer.
+        continue;
+      }
+    }
+    
+    return racha;
+  };

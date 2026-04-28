@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const authMiddleware_1 = require("../middlewares/authMiddleware");
 const adminController_1 = require("../controllers/adminController");
+const executiveController_1 = require("../controllers/executiveController");
 const router = express_1.default.Router();
 router.use(authMiddleware_1.protect);
 router.use(authMiddleware_1.requireAdmin);
@@ -14,4 +15,5 @@ router.get('/metrics/health', (req, res) => {
 });
 router.get('/users/list', adminController_1.obtenerCoacheesActivos);
 router.get('/metrics/consolidated', adminController_1.obtenerMetricasConsolidadas);
+router.get('/metrics/executive', executiveController_1.obtenerMetricasEjecutivas);
 exports.default = router;

@@ -13,6 +13,7 @@ export const obtenerCoacheesActivos = async (req: Request, res: Response): Promi
         nombre: true,
         apellido: true,
         email: true,
+        cargo: true,
         company: {
           select: {
             nombre: true,
@@ -24,11 +25,12 @@ export const obtenerCoacheesActivos = async (req: Request, res: Response): Promi
       },
     });
     
-    // Transformar para que se alinee con `{ id, nombre, email, company: { nombre } }` y combino nombre+apellido si lo desean, pero `nombre` y `apellido` está bien.
+    // Transformar para que se alinee con `{ id, nombre, email, company: { nombre }, cargo }`
     const result = coachees.map(c => ({
       id: c.id,
       nombre: `${c.nombre} ${c.apellido}`.trim(),
       email: c.email,
+      cargo: c.cargo || 'Sin Cargo',
       company: c.company ? { nombre: c.company.nombre } : { nombre: 'Sin Empresa' }
     }));
 
@@ -44,11 +46,30 @@ import { calcularNivel } from '../services/gamificationService';
 
 export const obtenerMetricasConsolidadas = async (req: Request, res: Response): Promise<void> => {
   try {
+    const { empresas, cargos, search } = req.query;
+
+    let whereClause: any = { role: 'COACHEE', activo: true };
+
+    if (search) {
+      whereClause.OR = [
+        { nombre: { contains: String(search), mode: 'insensitive' } },
+        { apellido: { contains: String(search), mode: 'insensitive' } },
+        { email: { contains: String(search), mode: 'insensitive' } }
+      ];
+    }
+
+    if (empresas) {
+      const empresasArr = String(empresas).split(',');
+      whereClause.company = { nombre: { in: empresasArr } };
+    }
+
+    if (cargos) {
+      const cargosArr = String(cargos).split(',');
+      whereClause.cargo = { in: cargosArr };
+    }
+
     const coachees = await prisma.user.findMany({
-      where: {
-        role: 'COACHEE',
-        activo: true,
-      },
+      where: whereClause,
       include: {
         company: true,
         ciclos: {
