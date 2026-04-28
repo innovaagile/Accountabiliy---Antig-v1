@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { apiFetch } from '../../api/config';
-import { Award, Zap, Activity, Target, Flame, Compass, Quote, Check, Clock, Calendar, Info, ListChecks, BookOpen, Bell, ChevronDown, ChevronUp, Star, Shield, Trophy } from 'lucide-react';
+import { Award, Zap, Activity, Target, Flame, Compass, Quote, Check, Clock, Calendar, Info, ListChecks, BookOpen, Bell, ChevronDown, ChevronUp, Star, Shield, Trophy, MinusCircle } from 'lucide-react';
 import { ComodinModal } from '../../components/dashboard/ComodinModal';
 import { formatearFechaOpcionesComodin } from '../../utils/dateUtils';
 
@@ -71,17 +71,18 @@ export const MisAvances = () => {
         tareasHoy = 3
     } = data;
 
-    // Calcular XP para el siguiente nivel
     const calculateProgress = (xp: number) => {
-        let min = 0; let max = 100;
-        if (xp >= 1500) { min = 1500; max = 3000; }
-        else if (xp >= 700) { min = 700; max = 1500; }
-        else if (xp >= 300) { min = 300; max = 700; }
-        else if (xp >= 100) { min = 100; max = 300; }
-        else { min = 0; max = 100; }
+        let min = 0; let max = 150;
+        if (xp >= 580) { min = 580; max = 580; }
+        else if (xp >= 320) { min = 320; max = 580; }
+        else if (xp >= 150) { min = 150; max = 320; }
+        else { min = 0; max = 150; }
 
-        const progress = Math.min(100, Math.max(0, ((xp - min) / (max - min)) * 100));
-        return { progress, max, faltante: max - xp };
+        let progress = 100;
+        if (max > min) {
+            progress = Math.min(100, Math.max(0, ((xp - min) / (max - min)) * 100));
+        }
+        return { progress, max, faltante: xp >= 580 ? 0 : max - xp };
     };
 
     const { progress, max, faltante } = calculateProgress(xpTotal);
@@ -105,15 +106,29 @@ export const MisAvances = () => {
     };
 
     const getEstadoDiaMessage = (tarea: any) => {
-        if (!tarea.esHoy) {
-            return <span className="text-gray-500">Tranquilo, esta tarea es para el día {tarea.fechaProximoDia} 🗓️</span>;
+        if (tarea.isSemanal && !tarea.esHoy) {
+            return (
+                <div className="flex items-center gap-2">
+                    <MinusCircle className="w-5 h-5 text-red-500" />
+                    <span className="text-red-500 font-bold">Hoy no toca</span>
+                </div>
+            );
         }
-        if (completadasHoy === 0) {
-            return <span className="text-gray-600">Recuerda no dejar para mañana lo que debes hacer hoy 📋</span>;
-        } else if (completadasHoy > 0 && completadasHoy < tareasHoy) {
-            return <span className="text-blue-600">¡Felicitaciones, ya empezaste! Solo falta un poco de esfuerzo hoy 🚀</span>;
+
+        if (tarea.completadaHoy) {
+            return (
+                <div className="flex items-center gap-2">
+                    <Check className="w-5 h-5 text-[#A9D42C]" />
+                    <span className="text-[#A9D42C] font-black">Listo</span>
+                </div>
+            );
         } else {
-            return <span className="text-[#A9D42C]">¡Lo lograste! La práctica y consistencia es la clave para alcanzar tus objetivos ✅</span>;
+            return (
+                <div className="flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-orange-500" />
+                    <span className="text-orange-500 font-bold">No lo olvides</span>
+                </div>
+            );
         }
     };
 
@@ -148,12 +163,14 @@ export const MisAvances = () => {
         <div className="min-h-screen bg-[#E6E9E1] text-[#1B254B] font-['Plus_Jakarta_Sans',_sans-serif]">
             <div className="p-6 md:p-10 space-y-8 max-w-7xl mx-auto">
                 {/* MARCO 1: Cabecera y Rango */}
-                <div className="bg-white rounded-[24px] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-col md:flex-row items-center gap-8 relative overflow-hidden">
-                    {/* Decoración */}
-                    <div 
-                        className="absolute -right-20 -top-20 w-64 h-64 rounded-full opacity-20 blur-3xl pointer-events-none"
-                        style={{ backgroundColor: nivelDetalle?.color || '#9CA3AF' }}
-                    ></div>
+                <div className="bg-white rounded-[24px] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-col md:flex-row items-center gap-8 relative">
+                    {/* Contenedor seguro para decoración sin afectar el overflow del Tooltip */}
+                    <div className="absolute inset-0 rounded-[24px] overflow-hidden pointer-events-none">
+                        <div 
+                            className="absolute -right-20 -top-20 w-64 h-64 rounded-full opacity-20 blur-3xl pointer-events-none"
+                            style={{ backgroundColor: nivelDetalle?.color || '#9CA3AF' }}
+                        ></div>
+                    </div>
 
                     <div className="w-24 h-24 rounded-full bg-[#eef7d5] border-4 shadow-sm flex items-center justify-center flex-shrink-0 z-10" style={{ borderColor: '#A9D42C' }}>
                         <Award className="w-10 h-10 text-[#A9D42C]" />
@@ -166,12 +183,24 @@ export const MisAvances = () => {
                             <span className="text-gray-900">!</span>
                         </h2>
                         <div className="flex items-center justify-center md:justify-start gap-3 mb-6">
-                            <span 
-                                className="px-4 py-1.5 rounded-full text-sm font-black text-white shadow-sm"
-                                style={{ backgroundColor: nivelDetalle?.color || '#9CA3AF' }}
-                            >
-                                Rango: {nivelDetalle?.nivel || 'Novato'}
-                            </span>
+                            <div className="relative group flex items-center">
+                                <span 
+                                    className="px-4 py-1.5 rounded-full text-sm font-black text-white shadow-sm cursor-help"
+                                    style={{ backgroundColor: nivelDetalle?.color || '#9CA3AF' }}
+                                >
+                                    Rango: {nivelDetalle?.nivel || 'Novato'}
+                                </span>
+                                {/* Tooltip Escala de Rangos */}
+                                <div className="absolute top-full mt-2 left-0 w-48 p-3 bg-gray-800 text-white text-xs rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none">
+                                    <p className="font-bold mb-1">Escala de Rangos:</p>
+                                    <ul className="list-disc pl-4 space-y-1 text-gray-200">
+                                        <li>Iniciado (0 XP)</li>
+                                        <li>Constante (150 XP)</li>
+                                        <li>Ejecutivo (320 XP)</li>
+                                        <li>Maestro (580 XP)</li>
+                                    </ul>
+                                </div>
+                            </div>
                             <span className="text-sm font-bold text-gray-500">{xpTotal} XP Total</span>
                         </div>
                         
@@ -376,32 +405,41 @@ export const MisAvances = () => {
                             <thead>
                                 <tr className="border-b-2 border-gray-100">
                                     <th className="pb-4 font-bold text-gray-400 uppercase tracking-wider text-sm w-1/4">Tarea</th>
-                                    <th className="pb-4 font-bold text-gray-400 uppercase tracking-wider text-sm w-2/5">Estado del día</th>
-                                    <th className="pb-4 font-bold text-gray-400 uppercase tracking-wider text-sm text-center w-1/6">Última Semana</th>
-                                    <th className="pb-4 font-bold text-gray-400 uppercase tracking-wider text-sm text-center w-1/6">Ciclo</th>
+                                    <th className="pb-4 font-bold text-gray-400 uppercase tracking-wider text-sm w-1/4">Estado del día</th>
+                                    <th className="pb-4 font-bold text-gray-400 uppercase tracking-wider text-sm text-center w-1/4">Consistencia</th>
+                                    <th className="pb-4 font-bold text-gray-400 uppercase tracking-wider text-sm text-center w-1/4">Tendencia</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {tareasMock?.map((tarea: any, idx: number) => {
-                                    const semPorcentaje = Math.round((tarea.semanaRealizadas / tarea.semanaTotal) * 100);
-                                    const cicloPorcentaje = Math.round((tarea.cicloRealizadas / tarea.cicloTotal) * 100);
+                                    // Protect against division by zero
+                                    const aLaFechaPorcentaje = tarea.aLaFechaTotal > 0 ? Math.round((tarea.aLaFechaRealizadas / tarea.aLaFechaTotal) * 100) : 0;
 
                                     return (
                                         <tr key={tarea.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
                                             <td className="py-5 pr-4">
                                                 <span className="font-bold text-[#1B254B] block">{tarea.nombre}</span>
-                                                {tarea.isSemanal && <span className="text-xs font-bold text-gray-400">Semanal</span>}
+                                                <span className="text-xs font-bold text-gray-400">{tarea.isSemanal ? "Semanal - Viernes" : "Diaria"}</span>
                                             </td>
                                             <td className="py-5 pr-4 text-sm font-medium">
                                                 {getEstadoDiaMessage(tarea)}
                                             </td>
                                             <td className="py-5 px-2 text-center">
-                                                <div className={`text-2xl font-black ${getColorClass(semPorcentaje)}`}>{semPorcentaje}%</div>
-                                                <div className="text-xs font-bold text-gray-400">{tarea.semanaRealizadas}/{tarea.semanaTotal}</div>
+                                                {tarea.aLaFechaTotal === 0 ? (
+                                                    <span className="text-gray-400 font-bold">-</span>
+                                                ) : (
+                                                    <>
+                                                        <div className={`text-2xl font-black ${getColorClass(aLaFechaPorcentaje)}`}>{aLaFechaPorcentaje}%</div>
+                                                        <div className="text-xs font-bold text-gray-400">{tarea.aLaFechaRealizadas}/{tarea.aLaFechaTotal}</div>
+                                                    </>
+                                                )}
                                             </td>
-                                            <td className="py-5 px-2 text-center">
-                                                <div className={`text-2xl font-black ${getColorClass(cicloPorcentaje)}`}>{cicloPorcentaje}%</div>
-                                                <div className="text-xs font-bold text-gray-400">{tarea.cicloRealizadas}/{tarea.cicloTotal}</div>
+                                            <td className="py-5 px-2">
+                                                <div className="flex items-center justify-center gap-1.5">
+                                                    {tarea.tendencia?.map((color: string, index: number) => (
+                                                        <div key={index} className={`w-3 h-3 rounded-full shadow-sm ${color}`}></div>
+                                                    ))}
+                                                </div>
                                             </td>
                                         </tr>
                                     );

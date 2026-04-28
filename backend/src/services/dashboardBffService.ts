@@ -4,8 +4,8 @@ import { calcularNivel } from './gamificationService';
 const diasSemanas = ['DOM', 'LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB'];
 
 const obtenerMedallasDefinidas = () => [
-    { id: "1", nombre: "Primeros Pasos", descripcion: "Lograste romper la inercia y completaste las tareas de tu primer día.", icono: "Star", colorBase: "bg-blue-50", colorIcono: "text-blue-500" },
-    { id: "2", nombre: "Semana de Fuego", descripcion: "Alcanzaste una racha de 7 días ininterrumpidos.", icono: "Flame", colorBase: "bg-orange-50", colorIcono: "text-orange-500" },
+    { id: "1", nombre: "Primeros Pasos", descripcion: "Rompiste la inercia y lograste tu primera tarea.", icono: "Star", colorBase: "bg-blue-50", colorIcono: "text-blue-500" },
+    { id: "2", nombre: "Semana de Fuego", descripcion: "Lograste una racha de 5 días seguidos", icono: "Flame", colorBase: "bg-orange-50", colorIcono: "text-orange-500" },
     { id: "3", nombre: "Constancia Pura", descripcion: "Completaste el 80% de tus tareas en la primera mitad del ciclo.", icono: "Activity", colorBase: "bg-[#eef7d5]", colorIcono: "text-[#A9D42C]" },
     { id: "4", nombre: "Maestro del Hábito", descripcion: "Conseguiste completar todas tus tareas diarias y semanales durante 14 días.", icono: "Shield", colorBase: "bg-purple-50", colorIcono: "text-purple-500" },
     { id: "5", nombre: "Leyenda", descripcion: "Terminaste el ciclo con el 100% de compromiso y sin usar comodines.", icono: "Trophy", colorBase: "bg-yellow-50", colorIcono: "text-yellow-500" }
@@ -101,33 +101,93 @@ export const generarHeatmap = async (cicloId: string, fechaInicio: Date, fechaFi
     return { heatmapDays, porcentajeCompromiso };
 };
 
-export const calcularAnalisisTareas = async (cicloId: string) => {
-    const tareas = await prisma.tarea.findMany({
+export const calcularAnalisisTareas = async (cicloId: string, fechaInicio: Date, fechaFin: Date) => {
+    const tareasBD = await prisma.tarea.findMany({
         where: { cicloId },
         include: { cumplimientos: true }
     });
     
+    // Ignorar tareas eliminadas u obsoletas
+    const tareas = tareasBD.filter(t => t.activa);
+
     const today = new Date();
     today.setHours(0,0,0,0);
     const isWeekend = today.getDay() === 0 || today.getDay() === 6;
     const isFriday = today.getDay() === 5;
 
     const analisis = tareas.map(t => {
+        let aLaFechaTotal = 0;
+        let aLaFechaRealizadas = 0;
+        let cicloTotalProyectado = 0;
+
+        // Calcular progreso proyectado contra el ciclo completo
+        let pDate = new Date(fechaInicio);
+        pDate.setHours(0,0,0,0);
+        let endD = new Date(fechaFin);
+        endD.setHours(0,0,0,0);
+        while(pDate <= endD) {
+            const isWknd = pDate.getDay() === 0 || pDate.getDay() === 6;
+            const isFri = pDate.getDay() === 5;
+            if (!isWknd) {
+                if (t.periodicidad === 'DIARIA') cicloTotalProyectado++;
+                if (t.periodicidad === 'SEMANAL' && isFri) cicloTotalProyectado++;
+            }
+            pDate.setDate(pDate.getDate() + 1);
+        }
+
+        let historialEjecuciones: any[] = [];
+
+        let d = new Date(fechaInicio);
+        d.setHours(0,0,0,0);
+
+        while (d <= today) {
+            let appliesToThisDay = false;
+            const isWknd = d.getDay() === 0 || d.getDay() === 6;
+            const isFri = d.getDay() === 5;
+            
+            if (!isWknd) {
+                if (t.periodicidad === 'DIARIA') appliesToThisDay = true;
+                if (t.periodicidad === 'SEMANAL' && isFri) appliesToThisDay = true;
+            }
+
+            if (appliesToThisDay) {
+                aLaFechaTotal++;
+                
+                const cumplido = t.cumplimientos.find(c => {
+                    const cDate = new Date(c.fecha);
+                    cDate.setHours(0,0,0,0);
+                    return cDate.getTime() === d.getTime() && c.completada;
+                });
+
+                // Anti-Fantasmas: solo contar si la tarea aplicaba a este día
+                if (cumplido) {
+                    aLaFechaRealizadas++;
+                }
+
+                historialEjecuciones.push({
+                    isPast: d.getTime() < today.getTime(),
+                    isToday: d.getTime() === today.getTime(),
+                    completada: !!cumplido
+                });
+            }
+
+            d.setDate(d.getDate() + 1);
+        }
+
+        const last5 = historialEjecuciones.slice(-5);
+        const tendencia = Array(5 - last5.length).fill('bg-gray-200').concat(
+            last5.map(h => {
+                if (h.completada) return 'bg-[#A9D42C]';
+                if (h.isToday && !h.completada) return 'bg-gray-200';
+                return 'bg-red-500';
+            })
+        );
+
         const completadaHoy = !!t.cumplimientos.find(c => {
             const cDate = new Date(c.fecha);
             cDate.setHours(0,0,0,0);
             return cDate.getTime() === today.getTime() && c.completada;
         });
-        
-        // Mocking/Aproximando totals para la tabla
-        const cicloRealizadas = t.cumplimientos.filter(c => c.completada).length;
-        const cicloTotal = 20; // Aproximado para dias habiles
-        
-        // Semana: ultimos 7 dias
-        const limitSemana = new Date(today);
-        limitSemana.setDate(today.getDate() - 7);
-        const semanaRealizadas = t.cumplimientos.filter(c => c.completada && new Date(c.fecha) >= limitSemana).length;
-        const semanaTotal = t.periodicidad === 'SEMANAL' ? 1 : 5;
 
         // Logica exacta para "esHoy" que alimenta la traccion
         let esHoy = false;
@@ -142,15 +202,23 @@ export const calcularAnalisisTareas = async (cicloId: string) => {
             esHoy,
             fechaProximoDia: 'Pronto',
             completadaHoy,
-            semanaRealizadas,
-            semanaTotal,
-            cicloRealizadas,
-            cicloTotal,
+            aLaFechaRealizadas,
+            aLaFechaTotal,
+            tendencia,
+            cicloRealizadas: t.cumplimientos.filter(c => c.completada).length,
+            cicloTotal: cicloTotalProyectado,
             isSemanal: t.periodicidad === 'SEMANAL',
             activa: t.activa
         };
     });
     
+    // Sort so daily is at top, weekly is at bottom
+    analisis.sort((a,b) => {
+        if (a.isSemanal && !b.isSemanal) return 1;
+        if (!a.isSemanal && b.isSemanal) return -1;
+        return 0;
+    });
+
     return analisis;
 };
 
@@ -192,8 +260,8 @@ export const calcularMedallas = async (user: any, cicloInfo: any) => {
         nuevasDesbloqueadas = true;
     }
     
-    // 2. Semana de Fuego: racha >= 7
-    if (user.rachaActual >= 7 && !desbloqueadas.includes("2")) {
+    // 2. Semana de Fuego: racha >= 5
+    if (user.rachaActual >= 5 && !desbloqueadas.includes("2")) {
         desbloqueadas.push("2");
         nuevasDesbloqueadas = true;
     }
@@ -254,21 +322,9 @@ export const obtenerDashboardBff = async (userId: string) => {
         (activeCiclo as any).diaHabilActual = diasHabiles;
 
         heatmapInfo = await generarHeatmap(activeCiclo.id, activeCiclo.fechaInicio, activeCiclo.fechaFin);
-        analisisTareas = await calcularAnalisisTareas(activeCiclo.id);
+        analisisTareas = await calcularAnalisisTareas(activeCiclo.id, activeCiclo.fechaInicio, activeCiclo.fechaFin);
         sabidurias = await extraerSabidurias(activeCiclo.id);
     }
-
-    const medallas = await calcularMedallas(user, { 
-        diaHabilActual: diasHabiles || 1, 
-        porcentajeCompromiso: heatmapInfo.porcentajeCompromiso 
-    });
-
-    const nivelDetalle = calcularNivel(user.xpTotal || 0);
-
-    // Calcular hoy (Tracción de Hoy)
-    const tareasActivas = analisisTareas.filter(t => t.activa);
-    const tareasHoy = tareasActivas.filter(t => t.esHoy).length;
-    const completadasHoy = tareasActivas.filter(t => t.esHoy && t.completadaHoy).length;
 
     /**
      * Calcula la racha de días hábiles seguidos con al menos 1 tarea realizada.
@@ -302,6 +358,19 @@ export const obtenerDashboardBff = async (userId: string) => {
     };
 
     const rachaActual = calcularRachaReal(heatmapInfo.heatmapDays);
+    user.rachaActual = rachaActual; // Inject the real streak before evaluating medals
+
+    const medallas = await calcularMedallas(user, { 
+        diaHabilActual: diasHabiles || 1, 
+        porcentajeCompromiso: heatmapInfo.porcentajeCompromiso 
+    });
+
+    const nivelDetalle = calcularNivel(user.xpTotal || 0);
+
+    // Calcular hoy (Tracción de Hoy)
+    const tareasActivas = analisisTareas.filter(t => t.activa);
+    const tareasHoy = tareasActivas.filter(t => t.esHoy).length;
+    const completadasHoy = tareasActivas.filter(t => t.esHoy && t.completadaHoy).length;
 
     return {
         id: user.id,

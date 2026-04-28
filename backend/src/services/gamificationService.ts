@@ -4,11 +4,10 @@ import prisma from '../config/db';
  * Retorna el Nivel y Color de acuerdo a la XP actual del usuario.
  */
 export const calcularNivel = (xp: number) => {
-  if (xp >= 1500) return { nivel: 'Leyenda', color: '#D97706' }; // Ámbar/Dorado
-  if (xp >= 700) return { nivel: 'Maestro', color: '#9333EA' }; // Púrpura
-  if (xp >= 300) return { nivel: 'Constante', color: '#A9D42C' }; // Verde Innova
-  if (xp >= 100) return { nivel: 'Aprendiz', color: '#38BDF8' }; // Azul claro
-  return { nivel: 'Novato', color: '#9CA3AF' }; // Gris plata
+  if (xp >= 580) return { nivel: 'Maestro', color: '#9333EA' }; // Púrpura
+  if (xp >= 320) return { nivel: 'Ejecutivo', color: '#38BDF8' }; // Azul claro
+  if (xp >= 150) return { nivel: 'Constante', color: '#A9D42C' }; // Verde Innova
+  return { nivel: 'Iniciado', color: '#9CA3AF' }; // Gris plata
 };
 
 /**
@@ -19,38 +18,7 @@ export const calcularNivel = (xp: number) => {
  * - Bono racha: 2 XP * racha actual
  */
 export const calcularXPObtenida = (tarea: any, cumplimiento: any, rachaActual: number): number => {
-  let xp = 10; // Base
-
-  // Bono Reflexión
-  if (cumplimiento.aprendizajeDia && cumplimiento.aprendizajeDia.trim() !== '') {
-    xp += 5;
-  }
-
-  // Bono Puntualidad (si tiene hora programada)
-  // tarea.horaProgramada viene como string "HH:mm"
-  if (tarea.horaProgramada) {
-    const ahora = new Date();
-    const horaActual = ahora.getHours();
-    const minsActual = ahora.getMinutes();
-    
-    const [hStr, mStr] = tarea.horaProgramada.split(':');
-    if (hStr) {
-      const hProg = parseInt(hStr, 10);
-      const mProg = parseInt(mStr || '0', 10);
-      
-      const diffMins = Math.abs((horaActual * 60 + minsActual) - (hProg * 60 + mProg));
-      if (diffMins <= 60) {
-        xp += 5;
-      }
-    }
-  }
-
-  // Bono Racha
-  if (rachaActual > 0) {
-    xp += (2 * rachaActual);
-  }
-
-  return xp;
+  return 10;
 };
 
 /**

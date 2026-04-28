@@ -33,9 +33,6 @@ const CoacheeTopBar = () => {
           >
             Mis avances
           </button>
-          <button className="text-gray-400 font-bold text-sm hover:text-[#1B254B] uppercase tracking-wide transition-colors h-full flex items-center">
-            Mi compromiso
-          </button>
         </div>
         
         {/* Derecha: Perfil y Logout */}

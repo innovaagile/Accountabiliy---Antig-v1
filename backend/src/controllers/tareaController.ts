@@ -171,6 +171,15 @@ export const registrarCumplimiento = async (req: Request, res: Response): Promis
           rachaActual: { increment: 1 } // Sumamos +1 a la racha por hacer "al menos 1 tarea"
         }
       });
+    } else if (!completada && wasCompleted) {
+      // Restar los XP si el usuario desmarca la tarea para evitar farmeo
+      const xpGanada = calcularXPObtenida(tarea, cumplimiento, user.rachaActual); // 10 XP
+      await prisma.user.update({
+        where: { id: userId },
+        data: { 
+          xpTotal: { decrement: xpGanada }
+        }
+      });
     }
 
     res.json(cumplimiento);
