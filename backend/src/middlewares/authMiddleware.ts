@@ -34,3 +34,11 @@ export const protect = (req: AuthRequest, res: Response, next: NextFunction): vo
     res.status(401).json({ message: 'No autorizado, token fallido' });
   }
 };
+
+export const requireAdmin = (req: AuthRequest, res: Response, next: NextFunction): void => {
+  if (req.user && req.user.role === 'ADMIN') {
+    next();
+  } else {
+    res.status(403).json({ message: 'Acceso denegado: Se requiere rol de Administrador' });
+  }
+};

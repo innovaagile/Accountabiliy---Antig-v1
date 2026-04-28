@@ -1,10 +1,11 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, Settings } from 'lucide-react';
+import { LayoutDashboard, Users, Settings, BarChart2 } from 'lucide-react';
 
 const Sidebar = () => {
   const menuItems = [
     { name: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+    { name: 'Métricas', icon: BarChart2, path: '/admin/metrics' },
     { name: 'Usuarios', icon: Users, path: '/dashboard/usuarios' },
     { name: 'Configuración', icon: Settings, path: '/dashboard/configuracion' },
   ];

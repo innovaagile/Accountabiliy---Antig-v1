@@ -7,6 +7,7 @@ import frasesRoutes from './routes/frases.routes';
 import diagnosticoRoutes from './routes/diagnosticoRoutes';
 import iaRoutes from './routes/iaRoutes';
 import contratoRoutes from './routes/contratoRoutes';
+import adminRoutes from './routes/adminRoutes';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -21,6 +22,7 @@ app.use('/api/frases', frasesRoutes);
 app.use('/api/diagnostico', diagnosticoRoutes);
 app.use('/api/ia', iaRoutes);
 app.use('/api/contratos', contratoRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'InnovaAgile API running' });

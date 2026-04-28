@@ -1,0 +1,163 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.registrarCumplimiento = exports.eliminarTarea = exports.actualizarTarea = exports.crearTarea = void 0;
+const db_1 = __importDefault(require("../config/db"));
+const gamificationService_1 = require("../services/gamificationService");
+const crearTarea = async (req, res) => {
+    try {
+        const { cicloId } = req.params;
+        const { nombre, momento, accion, periodicidad, diasSemana, fechasMensuales, horaSugerida, horaProgramada, icono } = req.body;
+        if (periodicidad === 'MENSUAL' && fechasMensuales) {
+            if (Array.isArray(fechasMensuales) && fechasMensuales.length > 3) {
+                res.status(400).json({ message: 'Las tareas mensuales admiten un máximo de 3 fechas.' });
+                return;
+            }
+        }
+        const nuevaTarea = await db_1.default.tarea.create({
+            data: {
+                cicloId,
+                nombre,
+                momento,
+                accion,
+                periodicidad,
+                diasSemana: diasSemana ? diasSemana : undefined,
+                fechasMensuales: fechasMensuales ? fechasMensuales : undefined,
+                horaSugerida,
+                horaProgramada,
+                icono: icono || 'CheckCircle',
+                activa: true
+            }
+        });
+        res.status(201).json(nuevaTarea);
+    }
+    catch (error) {
+        console.error('Error al crear tarea:', error);
+        res.status(500).json({ message: 'Error interno del servidor.' });
+    }
+};
+exports.crearTarea = crearTarea;
+const actualizarTarea = async (req, res) => {
+    try {
+        const { tareaId } = req.params;
+        const { nombre, momento, accion, periodicidad, diasSemana, fechasMensuales, horaSugerida, horaProgramada, icono } = req.body;
+        if (periodicidad === 'MENSUAL' && fechasMensuales) {
+            if (Array.isArray(fechasMensuales) && fechasMensuales.length > 3) {
+                res.status(400).json({ message: 'Las tareas mensuales admiten un máximo de 3 fechas.' });
+                return;
+            }
+        }
+        const tareaActualizada = await db_1.default.tarea.update({
+            where: { id: tareaId },
+            data: {
+                nombre,
+                momento,
+                accion,
+                periodicidad,
+                diasSemana,
+                fechasMensuales,
+                horaSugerida,
+                horaProgramada,
+                icono
+            }
+        });
+        res.json(tareaActualizada);
+    }
+    catch (error) {
+        console.error('Error al actualizar tarea:', error);
+        res.status(500).json({ message: 'Error interno del servidor.' });
+    }
+};
+exports.actualizarTarea = actualizarTarea;
+const eliminarTarea = async (req, res) => {
+    try {
+        // Tarea 2: Confirmar recepción de los tres IDs
+        const { id, cicloId, tareaId } = req.params;
+        // Verificamos que al menos venga el tareaId
+        if (!tareaId) {
+            res.status(400).json({ message: 'Se requiere tareaId' });
+            return;
+        }
+        await db_1.default.tarea.delete({
+            where: { id: tareaId }
+        });
+        res.json({ message: 'Tarea eliminada exitosamente' });
+    }
+    catch (error) {
+        console.error('Error al eliminar tarea:', error);
+        res.status(500).json({ message: 'Error interno del servidor.' });
+    }
+};
+exports.eliminarTarea = eliminarTarea;
+const registrarCumplimiento = async (req, res) => {
+    try {
+        const { id: userId, tareaId } = req.params;
+        const { completada, aprendizajeDia } = req.body;
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+        // Obtener tarea y usuario para gamificación
+        const tarea = await db_1.default.tarea.findUnique({ where: { id: tareaId } });
+        const user = await db_1.default.user.findUnique({ where: { id: userId } });
+        if (!tarea || !user) {
+            res.status(404).json({ message: 'Tarea o Usuario no encontrado.' });
+            return;
+        }
+        // Buscar si ya existía el cumplimiento
+        const cumplimientoPrevio = await db_1.default.cumplimiento.findUnique({
+            where: {
+                tareaId_userId_fecha: { tareaId, userId, fecha: hoy }
+            }
+        });
+        const wasCompleted = cumplimientoPrevio?.completada || false;
+        const cumplimiento = await db_1.default.cumplimiento.upsert({
+            where: {
+                tareaId_userId_fecha: {
+                    tareaId,
+                    userId,
+                    fecha: hoy
+                }
+            },
+            update: {
+                completada: completada !== undefined ? completada : undefined,
+                aprendizajeDia: aprendizajeDia !== undefined ? aprendizajeDia : undefined
+            },
+            create: {
+                tareaId,
+                userId,
+                fecha: hoy,
+                completada: completada || false,
+                aprendizajeDia: aprendizajeDia || ''
+            }
+        });
+        // --- GAMIFICACIÓN ---
+        // Si la tarea se acaba de marcar como completada (y no lo estaba antes)
+        if (completada && !wasCompleted) {
+            const xpGanada = (0, gamificationService_1.calcularXPObtenida)(tarea, cumplimiento, user.rachaActual);
+            await db_1.default.user.update({
+                where: { id: userId },
+                data: {
+                    xpTotal: { increment: xpGanada },
+                    rachaActual: { increment: 1 } // Sumamos +1 a la racha por hacer "al menos 1 tarea"
+                }
+            });
+        }
+        else if (!completada && wasCompleted) {
+            // Restar los XP si el usuario desmarca la tarea para evitar farmeo
+            const xpGanada = (0, gamificationService_1.calcularXPObtenida)(tarea, cumplimiento, user.rachaActual); // 10 XP
+            await db_1.default.user.update({
+                where: { id: userId },
+                data: {
+                    xpTotal: { decrement: xpGanada }
+                }
+            });
+        }
+        res.json(cumplimiento);
+    }
+    catch (error) {
+        console.error('Error al registrar cumplimiento:', error);
+        res.status(500).json({ message: 'Error interno del servidor.' });
+    }
+};
+exports.registrarCumplimiento = registrarCumplimiento;

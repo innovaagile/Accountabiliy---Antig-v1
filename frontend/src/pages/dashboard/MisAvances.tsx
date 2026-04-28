@@ -5,8 +5,10 @@ import { Award, Zap, Activity, Target, Flame, Compass, Quote, Check, Clock, Cale
 import { ComodinModal } from '../../components/dashboard/ComodinModal';
 import { formatearFechaOpcionesComodin } from '../../utils/dateUtils';
 
-export const MisAvances = () => {
+export const MisAvances = ({ targetUserId }: { targetUserId?: string } = {}) => {
     const { user } = useAuth();
+    const effectiveUserId = targetUserId || user?.id;
+    const isReadOnly = !!targetUserId;
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [expandedTasks, setExpandedTasks] = useState<number[]>([]);
@@ -21,7 +23,7 @@ export const MisAvances = () => {
         try {
             // La ruta debe ser limpia. El prefijo global (ej. /api) 
             // debe ser inyectado automáticamente por la utilidad apiFetch.
-            const res = await apiFetch(`/coachees/${user.id}/avances`);
+            const res = await apiFetch(`/coachees/${effectiveUserId}/avances`);
             const result = await res.json();
             setData(result);
             
@@ -40,10 +42,10 @@ export const MisAvances = () => {
     };
 
     useEffect(() => {
-        if (user?.id) {
+        if (effectiveUserId) {
             cargarAvances();
         }
-    }, [user?.id]);
+    }, [effectiveUserId]);
 
     if (!data || loading) {
         return (
@@ -160,8 +162,8 @@ export const MisAvances = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#E6E9E1] text-[#1B254B] font-['Plus_Jakarta_Sans',_sans-serif]">
-            <div className="p-6 md:p-10 space-y-8 max-w-7xl mx-auto">
+        <div className={`text-[#1B254B] font-['Plus_Jakarta_Sans',_sans-serif] ${isReadOnly ? 'bg-transparent w-full' : 'min-h-screen bg-[#E6E9E1]'}`}>
+            <div className={`space-y-8 max-w-7xl mx-auto ${isReadOnly ? 'p-0' : 'p-6 md:p-10'}`}>
                 {/* MARCO 1: Cabecera y Rango */}
                 <div className="bg-white rounded-[24px] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-col md:flex-row items-center gap-8 relative">
                     {/* Contenedor seguro para decoración sin afectar el overflow del Tooltip */}
@@ -283,7 +285,7 @@ export const MisAvances = () => {
                             return (
                                 <button 
                                     key={i} 
-                                    disabled={isWeekend || isUsed}
+                                    disabled={isWeekend || isUsed || isReadOnly}
                                     onClick={handleUseWildcard}
                                     className={`w-14 h-14 rounded-2xl flex items-center justify-center border-2 transition-all ${
                                         isUsed 
@@ -516,15 +518,15 @@ export const MisAvances = () => {
                         
                         <div className="space-y-4 mb-6">
                             {/* Opción A */}
-                            <label className={`flex items-start gap-4 p-4 rounded-xl border-2 transition-all cursor-pointer ${recordatorio === 'CADA_VEZ' ? 'border-[#A9D42C] bg-[#eef7d5]/50' : 'border-gray-100 bg-white'} ${!isExecutive ? 'opacity-60 cursor-not-allowed' : ''}`}>
+                            <label className={`flex items-start gap-4 p-4 rounded-xl border-2 transition-all cursor-pointer ${recordatorio === 'CADA_VEZ' ? 'border-[#A9D42C] bg-[#eef7d5]/50' : 'border-gray-100 bg-white'} ${!isExecutive || isReadOnly ? 'opacity-60 cursor-not-allowed' : ''}`}>
                                 <div className="mt-0.5">
                                     <input 
                                         type="radio" 
-                                        name="recordatorio" 
+                                        name="frecuenciaNotificacion" 
                                         value="CADA_VEZ"
                                         checked={recordatorio === 'CADA_VEZ'}
-                                        onChange={() => setRecordatorio('CADA_VEZ')}
-                                        disabled={!isExecutive}
+                                        onChange={() => !isReadOnly && setRecordatorio('CADA_VEZ')}
+                                        disabled={!isExecutive || isReadOnly}
                                         className="w-5 h-5 accent-[#A9D42C] border-gray-300 focus:ring-[#A9D42C] cursor-pointer disabled:cursor-not-allowed"
                                     />
                                 </div>
@@ -539,15 +541,16 @@ export const MisAvances = () => {
                             </label>
 
                             {/* Opción B */}
-                            <label className={`flex items-start gap-4 p-4 rounded-xl border-2 transition-all cursor-pointer ${recordatorio === 'UNA_VEZ' ? 'border-[#A9D42C] bg-[#eef7d5]/50' : 'border-gray-100 bg-white'}`}>
+                            <label className={`flex items-start gap-4 p-4 rounded-xl border-2 transition-all cursor-pointer ${recordatorio === 'UNA_VEZ' ? 'border-[#A9D42C] bg-[#eef7d5]/50' : 'border-gray-100 bg-white'} ${isReadOnly ? 'opacity-60 cursor-not-allowed' : ''}`}>
                                 <div className="mt-0.5">
                                     <input 
                                         type="radio" 
-                                        name="recordatorio" 
+                                        name="frecuenciaNotificacion" 
                                         value="UNA_VEZ"
                                         checked={recordatorio === 'UNA_VEZ'}
-                                        onChange={() => setRecordatorio('UNA_VEZ')}
-                                        className="w-5 h-5 accent-[#A9D42C] border-gray-300 focus:ring-[#A9D42C] cursor-pointer"
+                                        onChange={() => !isReadOnly && setRecordatorio('UNA_VEZ')}
+                                        disabled={isReadOnly}
+                                        className="w-5 h-5 accent-[#A9D42C] border-gray-300 focus:ring-[#A9D42C] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                     />
                                 </div>
                                 <div>

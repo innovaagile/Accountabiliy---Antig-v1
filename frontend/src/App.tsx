@@ -11,10 +11,18 @@ import CambiarPassword from './pages/CambiarPassword';
 import { MisAvances } from './pages/dashboard/MisAvances';
 
 import Diagnostico from './pages/Diagnostico';
+import { AdminMetricsDashboard } from './pages/dashboard/AdminMetricsDashboard';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isAuthenticated } = useAuth();
   if (!isAuthenticated) return <Navigate to="/login" />;
+  return <>{children}</>;
+};
+
+const AdminRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, user } = useAuth();
+  if (!isAuthenticated) return <Navigate to="/login" />;
+  if (user?.role !== 'ADMIN') return <Navigate to="/dashboard" />;
   return <>{children}</>;
 };
 
@@ -58,6 +66,18 @@ function App() {
             <Route path="coachee/:id" element={<DetalleCoachee />} />
             <Route path="avances" element={<MisAvances />} />
 
+          </Route>
+
+          {/* Rutas de Admin */}
+          <Route 
+            path="/admin" 
+            element={
+              <AdminRoute>
+                <MainLayout />
+              </AdminRoute>
+            } 
+          >
+            <Route path="metrics" element={<AdminMetricsDashboard />} />
           </Route>
 
           {/* Redirección por defecto */}

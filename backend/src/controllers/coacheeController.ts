@@ -20,7 +20,7 @@ export const obtenerCoachees = async (req: Request, res: Response): Promise<void
       ];
     }
     
-    if (empresa) whereClause.empresa = String(empresa);
+    if (empresa) whereClause.company = { nombre: String(empresa) };
     if (cargo) whereClause.cargo = String(cargo);
     
     // Asumimos lógica de negocio que valida con los ciclos
@@ -36,7 +36,8 @@ export const obtenerCoachees = async (req: Request, res: Response): Promise<void
       where: whereClause,
       include: {
         ciclos: true,
-        contracts: true
+        contracts: true,
+        company: true
       }
     });
 
@@ -46,7 +47,7 @@ export const obtenerCoachees = async (req: Request, res: Response): Promise<void
       email: c.email,
       pais: c.pais || 'No especificado',
       telefono: c.telefono || 'No especificado',
-      empresa: c.empresa,
+      empresa: c.company?.nombre || 'Sin Empresa',
       cargo: c.cargo,
       plan: c.servicioContratado || 'No asignado', 
       frecuencia: c.frecuenciaRecordatorios || 'No especificada', 
@@ -115,7 +116,7 @@ export const obtenerCoacheePorId = async (req: Request, res: Response): Promise<
 export const createCoachee = async (req: Request, res: Response): Promise<void> => {
   try {
     console.log("--- INICIANDO CREACIÓN DE COACHEE ---");
-    const { nombre, apellido, email, pais, telefono, empresa, cargo, servicio, frecuencia } = req.body;
+    const { nombre, apellido, email, pais, telefono, cargo, servicio, frecuencia } = req.body;
     const emailLower = email.toLowerCase();
     const exists = await prisma.user.findUnique({ where: { email: emailLower } });
     if (exists) { res.status(400).json({ message: 'El coachee ya existe' }); return; }
@@ -130,7 +131,7 @@ export const createCoachee = async (req: Request, res: Response): Promise<void> 
         passwordHash: passwordHash,
         role: 'COACHEE',
         pais, telefono: `+56 ${telefono}`,
-        empresa, cargo,
+        companyId: req.body.companyId || null, cargo,
         servicioContratado: servicio,
         frecuenciaRecordatorios: frecuencia,
       }
@@ -203,7 +204,7 @@ export const createCoachee = async (req: Request, res: Response): Promise<void> 
 export const actualizarCoachee = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { nombre, apellido, email, pais, telefono, empresa, cargo, activo, servicioContratado, frecuenciaRecordatorios, hasDiagnostico } = req.body;
+    const { nombre, apellido, email, pais, telefono, cargo, activo, servicioContratado, frecuenciaRecordatorios, hasDiagnostico } = req.body;
     const emailLower = email.toLowerCase();
     
     const coacheeActualizado = await prisma.user.update({
@@ -214,7 +215,7 @@ export const actualizarCoachee = async (req: Request, res: Response): Promise<vo
         email: emailLower,
         pais,
         telefono,
-        empresa,
+        companyId: req.body.companyId || undefined,
         cargo,
         activo,
         servicioContratado,
