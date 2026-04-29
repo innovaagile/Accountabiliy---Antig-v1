@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { apiFetch } from '../../api/config';
-import { Check, AlertCircle, Building2, Search } from 'lucide-react';
+import { Check, AlertCircle } from 'lucide-react';
 
 interface B2BMetric {
   id: string;
@@ -13,15 +13,20 @@ interface B2BMetric {
   estadoHealth: "On Track" | "At Risk";
 }
 
-export const B2BConsolidatedTable = () => {
+export const B2BConsolidatedTable = ({ filters }: { filters?: any }) => {
   const [metrics, setMetrics] = useState<B2BMetric[]>([]);
   const [loading, setLoading] = useState(true);
-  const [empresaFilter, setEmpresaFilter] = useState<string>('');
 
   useEffect(() => {
     const fetchMetrics = async () => {
+      setLoading(true);
       try {
-        const response = await apiFetch('/admin/metrics/consolidated');
+        const queryParams = new URLSearchParams();
+        if (filters?.search) queryParams.append('search', filters.search);
+        if (filters?.empresas?.length > 0) queryParams.append('empresas', filters.empresas.join(','));
+        if (filters?.cargos?.length > 0) queryParams.append('cargos', filters.cargos.join(','));
+
+        const response = await apiFetch(`/admin/metrics/consolidated?${queryParams.toString()}`);
         const data = await response.json();
         setMetrics(data);
       } catch (error) {
@@ -30,15 +35,13 @@ export const B2BConsolidatedTable = () => {
         setLoading(false);
       }
     };
-    fetchMetrics();
-  }, []);
+    
+    const timeoutId = setTimeout(() => {
+      fetchMetrics();
+    }, 300);
 
-  const empresas = Array.from(new Set(metrics.map(m => m.empresa))).sort();
-
-  const filteredMetrics = metrics.filter(m => {
-    if (empresaFilter && m.empresa !== empresaFilter) return false;
-    return true;
-  });
+    return () => clearTimeout(timeoutId);
+  }, [filters]);
 
   if (loading) {
     return (
@@ -55,23 +58,6 @@ export const B2BConsolidatedTable = () => {
           <h2 className="text-lg font-black text-[#1B254B]">Salud Global de la Cartera</h2>
           <p className="text-sm text-gray-400 font-medium">Estado de adopción y uso en tiempo real</p>
         </div>
-        
-        {/* Filtros */}
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <Building2 className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <select
-              value={empresaFilter}
-              onChange={(e) => setEmpresaFilter(e.target.value)}
-              className="pl-9 pr-8 py-2 text-sm border-2 border-gray-100 bg-gray-50 focus:outline-none focus:border-[#A9D42C] rounded-xl font-bold text-[#1B254B] appearance-none"
-            >
-              <option value="">Todas las Empresas</option>
-              {empresas.map(empresa => (
-                <option key={empresa} value={empresa}>{empresa}</option>
-              ))}
-            </select>
-          </div>
-        </div>
       </div>
 
       <div className="overflow-x-auto">
@@ -86,7 +72,7 @@ export const B2BConsolidatedTable = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {filteredMetrics.map((m) => (
+            {metrics.map((m) => (
               <tr key={m.id} className="hover:bg-gray-50/30 transition-colors">
                 <td className="px-6 py-4">
                   <span className="font-bold text-[#1B254B] block">{m.nombre}</span>
@@ -124,7 +110,7 @@ export const B2BConsolidatedTable = () => {
               </tr>
             ))}
             
-            {filteredMetrics.length === 0 && (
+            {metrics.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-6 py-12 text-center">
                   <p className="text-gray-400 font-bold">No hay usuarios que coincidan con los filtros.</p>
