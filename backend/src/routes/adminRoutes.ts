@@ -2,7 +2,7 @@ import express from 'express';
 import { protect, requireAdmin } from '../middlewares/authMiddleware';
 
 import { obtenerCoacheesActivos, obtenerMetricasConsolidadas } from '../controllers/adminController';
-import { obtenerMetricasEjecutivas } from '../controllers/executiveController';
+import { obtenerMetricasEjecutivas, obtenerDrillDownEjecutivo } from '../controllers/executiveController';
 
 const router = express.Router();
 
@@ -16,5 +16,6 @@ router.get('/metrics/health', (req, res) => {
 router.get('/users/list', obtenerCoacheesActivos);
 router.get('/metrics/consolidated', obtenerMetricasConsolidadas);
 router.get('/metrics/executive', obtenerMetricasEjecutivas);
+router.get('/metrics/drilldown/:userId', obtenerDrillDownEjecutivo);
 
 export default router;

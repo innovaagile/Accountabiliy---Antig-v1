@@ -1,10 +1,12 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid } from 'recharts';
 import { Activity, Zap } from 'lucide-react';
+import { InfoPopover } from '../../components/ui/InfoPopover';
 
 interface MetricData {
   rachaPromedio: number;
   compromisoPromedio: number;
+  tendenciaSemanal: { semana: string; consistencia: number }[];
   histogramaRacha: { name: string; value: number }[];
   mixOperativo: { name: string; value: number }[];
 }
@@ -12,15 +14,21 @@ interface MetricData {
 export const GlobalHealthPanel: React.FC<{ data: MetricData | null }> = ({ data }) => {
   if (!data) return null;
 
-  // Mock datos para la tendencia semanal (Requerimiento Hito 1)
-  const tendenciaMock = [
-    { semana: 'Sem 1', consistencia: 65 },
-    { semana: 'Sem 2', consistencia: 72 },
-    { semana: 'Sem 3', consistencia: 68 },
-    { semana: 'Sem 4', consistencia: data.compromisoPromedio }
-  ];
-
   const pieColors = ['#A9D42C', '#F59E0B'];
+
+  let compromisBg = 'bg-red-50';
+  let compromisText = 'text-red-600';
+  let compromisLabel = 'Incumplimiento';
+  
+  if (data.compromisoPromedio > 80) {
+    compromisBg = 'bg-[#eef7d5]';
+    compromisText = 'text-[#A9D42C]';
+    compromisLabel = 'Cumpliendo';
+  } else if (data.compromisoPromedio > 50) {
+    compromisBg = 'bg-amber-50';
+    compromisText = 'text-[#F59E0B]';
+    compromisLabel = 'Intermedio';
+  }
 
   return (
     <div className="space-y-6">
@@ -31,7 +39,10 @@ export const GlobalHealthPanel: React.FC<{ data: MetricData | null }> = ({ data 
             <Zap className="w-8 h-8 text-orange-500" />
           </div>
           <div>
-            <p className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-1">Racha Promedio</p>
+            <div className="flex items-center gap-2 mb-1">
+              <p className="text-sm font-bold text-gray-400 uppercase tracking-wider">Racha Promedio</p>
+              <InfoPopover content="Promedio de días consecutivos en los que el equipo filtrado ha completado al menos una tarea." position="bottom" />
+            </div>
             <div className="flex items-end gap-2">
               <span className="text-4xl font-black text-[#1B254B]">{data.rachaPromedio}</span>
               <span className="text-lg font-bold text-gray-400 mb-1">días</span>
@@ -44,10 +55,13 @@ export const GlobalHealthPanel: React.FC<{ data: MetricData | null }> = ({ data 
             <Activity className="w-8 h-8 text-[#A9D42C]" />
           </div>
           <div>
-            <p className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-1">Compromiso Global</p>
+            <div className="flex items-center gap-2 mb-1">
+              <p className="text-sm font-bold text-gray-400 uppercase tracking-wider">Compromiso Global</p>
+              <InfoPopover content="% de cumplimiento de tareas del grupo filtrado. Por defecto, muestra el ciclo activo actual." position="bottom" />
+            </div>
             <div className="flex items-end gap-2">
               <span className="text-4xl font-black text-[#1B254B]">{data.compromisoPromedio}%</span>
-              <span className="text-sm font-bold text-[#A9D42C] mb-2 bg-[#A9D42C]/10 px-2 py-0.5 rounded-full">On Track</span>
+              <span className={`text-sm font-bold ${compromisText} mb-2 ${compromisBg} px-2 py-0.5 rounded-full`}>{compromisLabel}</span>
             </div>
           </div>
         </div>
@@ -57,7 +71,10 @@ export const GlobalHealthPanel: React.FC<{ data: MetricData | null }> = ({ data 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Histograma */}
         <div className="bg-white p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-50 flex flex-col">
-          <h3 className="text-sm font-black text-[#1B254B] mb-6 uppercase tracking-wider">Distribución de Rachas</h3>
+          <div className="flex items-center gap-2 mb-6">
+            <h3 className="text-sm font-black text-[#1B254B] uppercase tracking-wider">Distribución de Rachas</h3>
+            <InfoPopover content="Agrupación de los ejecutivos según la longitud de su racha activa actual." position="bottom" />
+          </div>
           <div className="flex-1 min-h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data.histogramaRacha}>
@@ -75,10 +92,13 @@ export const GlobalHealthPanel: React.FC<{ data: MetricData | null }> = ({ data 
 
         {/* Tendencia Semanal */}
         <div className="bg-white p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-50 flex flex-col">
-          <h3 className="text-sm font-black text-[#1B254B] mb-6 uppercase tracking-wider">Tendencia Semanal (%)</h3>
+          <div className="flex items-center gap-2 mb-6">
+            <h3 className="text-sm font-black text-[#1B254B] uppercase tracking-wider">Tendencia Semanal (%)</h3>
+            <InfoPopover content="Evolución del porcentaje de tareas completadas frente a las programadas, agrupado por semanas reales." position="bottom" />
+          </div>
           <div className="flex-1 min-h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={tendenciaMock}>
+              <BarChart data={data.tendenciaSemanal}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
                 <XAxis dataKey="semana" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF', fontWeight: 'bold' }} dy={10} />
                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} domain={[0, 100]} />
@@ -86,7 +106,14 @@ export const GlobalHealthPanel: React.FC<{ data: MetricData | null }> = ({ data 
                   cursor={{ fill: '#f9fafb' }}
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                 />
-                <Bar dataKey="consistencia" fill="#A9D42C" radius={[6, 6, 0, 0]} barSize={32} />
+                <Bar dataKey="consistencia" radius={[6, 6, 0, 0]} barSize={32}>
+                  {data.tendenciaSemanal.map((entry, index) => {
+                    let color = '#EF4444';
+                    if (entry.consistencia >= 80) color = '#A9D42C';
+                    else if (entry.consistencia >= 50) color = '#F59E0B';
+                    return <Cell key={`cell-${index}`} fill={color} />;
+                  })}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -94,7 +121,10 @@ export const GlobalHealthPanel: React.FC<{ data: MetricData | null }> = ({ data 
 
         {/* Mix Operativo */}
         <div className="bg-white p-6 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-50 flex flex-col">
-          <h3 className="text-sm font-black text-[#1B254B] mb-2 uppercase tracking-wider">Mix Operativo</h3>
+          <div className="flex items-center gap-2 mb-2">
+            <h3 className="text-sm font-black text-[#1B254B] uppercase tracking-wider">Mix Operativo</h3>
+            <InfoPopover content="Distribución de la carga de tareas asignadas (Diarias vs. Semanales). Es un indicador de diseño, no de ejecución." position="bottom" />
+          </div>
           <div className="flex-1 min-h-[200px] flex flex-col items-center justify-center relative">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
