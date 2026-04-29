@@ -1,5 +1,5 @@
 import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid, LabelList } from 'recharts';
 import { Activity, Zap } from 'lucide-react';
 import { InfoPopover } from '../../components/ui/InfoPopover';
 
@@ -75,8 +75,8 @@ export const GlobalHealthPanel: React.FC<{ data: MetricData | null }> = ({ data 
             <h3 className="text-sm font-black text-[#1B254B] uppercase tracking-wider">Distribución de Rachas</h3>
             <InfoPopover content="Agrupación de los ejecutivos según la longitud de su racha activa actual." position="bottom" />
           </div>
-          <div className="flex-1 min-h-[200px]">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="flex-1 w-full mt-4">
+            <ResponsiveContainer width="100%" height={300}>
               <BarChart data={data.histogramaRacha}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF', fontWeight: 'bold' }} dy={10} />
@@ -84,7 +84,9 @@ export const GlobalHealthPanel: React.FC<{ data: MetricData | null }> = ({ data 
                   cursor={{ fill: '#f9fafb' }}
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                 />
-                <Bar dataKey="value" fill="#F97316" radius={[6, 6, 0, 0]} barSize={32} />
+                <Bar dataKey="value" fill="#F97316" radius={[6, 6, 0, 0]} barSize={32}>
+                  <LabelList dataKey="value" position="top" fill="#1B254B" fontSize={12} fontWeight="bold" />
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -96,8 +98,8 @@ export const GlobalHealthPanel: React.FC<{ data: MetricData | null }> = ({ data 
             <h3 className="text-sm font-black text-[#1B254B] uppercase tracking-wider">Tendencia Semanal (%)</h3>
             <InfoPopover content="Evolución del porcentaje de tareas completadas frente a las programadas, agrupado por semanas reales." position="bottom" />
           </div>
-          <div className="flex-1 min-h-[200px]">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="flex-1 w-full mt-4">
+            <ResponsiveContainer width="100%" height={300}>
               <BarChart data={data.tendenciaSemanal}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
                 <XAxis dataKey="semana" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF', fontWeight: 'bold' }} dy={10} />
@@ -107,6 +109,7 @@ export const GlobalHealthPanel: React.FC<{ data: MetricData | null }> = ({ data 
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                 />
                 <Bar dataKey="consistencia" radius={[6, 6, 0, 0]} barSize={32}>
+                  <LabelList dataKey="consistencia" position="top" formatter={(val: number) => `${val}%`} fill="#1B254B" fontSize={12} fontWeight="bold" />
                   {data.tendenciaSemanal.map((entry, index) => {
                     let color = '#EF4444';
                     if (entry.consistencia >= 80) color = '#A9D42C';
@@ -125,8 +128,8 @@ export const GlobalHealthPanel: React.FC<{ data: MetricData | null }> = ({ data 
             <h3 className="text-sm font-black text-[#1B254B] uppercase tracking-wider">Mix Operativo</h3>
             <InfoPopover content="Distribución de la carga de tareas asignadas (Diarias vs. Semanales). Es un indicador de diseño, no de ejecución." position="bottom" />
           </div>
-          <div className="flex-1 min-h-[200px] flex flex-col items-center justify-center relative">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="flex-1 w-full mt-4 flex flex-col items-center justify-center relative">
+            <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
                   data={data.mixOperativo}

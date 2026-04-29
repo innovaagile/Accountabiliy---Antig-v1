@@ -3,6 +3,8 @@ import { apiFetch } from '../../api/config';
 import { MasterFilterBar } from './MasterFilterBar';
 import { GlobalHealthPanel } from './GlobalHealthPanel';
 import { B2BConsolidatedTable } from './B2BConsolidatedTable';
+import { ReporteEjecutivoPDF } from '../../components/reportes/ReporteEjecutivoPDF';
+import { Printer } from 'lucide-react';
 
 interface ExecutiveFilters {
   search: string;
@@ -23,6 +25,7 @@ export const ExecutiveCommandCenter = () => {
 
   const [globalMetrics, setGlobalMetrics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   const [baseUsers, setBaseUsers] = useState<any[]>([]);
   const [availableCompanies, setAvailableCompanies] = useState<string[]>([]);
@@ -97,6 +100,28 @@ export const ExecutiveCommandCenter = () => {
   return (
     <div className="animate-in fade-in duration-300">
       
+      {isPrinting && (
+        <ReporteEjecutivoPDF 
+          filters={filters}
+          onReadyToPrint={() => window.print()}
+          onClose={() => setIsPrinting(false)}
+        />
+      )}
+
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-3xl font-black text-[#1B254B]">Executive Command Center</h1>
+          <p className="text-sm font-medium text-gray-500 mt-1">Supervisión en tiempo real del progreso de todos los ejecutivos.</p>
+        </div>
+        <button 
+          onClick={() => setIsPrinting(true)}
+          className="bg-white border border-[#A9D42C] text-[#A9D42C] hover:bg-[#eef7d5] transition-colors px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 shadow-sm"
+        >
+          <Printer className="w-5 h-5" />
+          Exportar a PDF
+        </button>
+      </div>
+
       <MasterFilterBar 
         filters={filters} 
         setFilters={setFilters} 

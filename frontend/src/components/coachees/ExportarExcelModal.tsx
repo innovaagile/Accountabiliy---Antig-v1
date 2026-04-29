@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X, FileSpreadsheet, Download } from 'lucide-react';
+import { X, FileSpreadsheet, Download, AlertCircle } from 'lucide-react';
+import { apiFetch } from '../../api/config';
 
 interface ExportarExcelModalProps {
   isOpen: boolean;
@@ -13,6 +14,8 @@ const ExportarExcelModal: React.FC<ExportarExcelModalProps> = ({ isOpen, onClose
     desde: '',
     hasta: ''
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -20,11 +23,39 @@ const ExportarExcelModal: React.FC<ExportarExcelModalProps> = ({ isOpen, onClose
     setFiltros({ ...filtros, [e.target.name]: e.target.value });
   };
 
-  const handleExportar = (e: React.FormEvent) => {
+  const handleExportar = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Lógica futura para solicitar el Excel al backend con estos filtros
-    console.log('Exportando reporte con filtros:', filtros);
-    onClose();
+    setLoading(true);
+    setError(null);
+
+    try {
+      const params = new URLSearchParams();
+      if (filtros.empresa && filtros.empresa !== 'Todas') params.append('empresa', filtros.empresa);
+      if (filtros.cargo && filtros.cargo !== 'Todos') params.append('cargo', filtros.cargo);
+      if (filtros.desde) params.append('desde', filtros.desde);
+      if (filtros.hasta) params.append('hasta', filtros.hasta);
+      
+      const response = await apiFetch(`/coachees/export/transaccional?${params.toString()}`);
+      if (!response.ok) {
+        throw new Error('Error al generar la exportación');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = "exportacion_transaccional_bi.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      
+      onClose();
+    } catch (err) {
+      console.error(err);
+      setError('Hubo un error al exportar la base de datos.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -97,14 +128,22 @@ const ExportarExcelModal: React.FC<ExportarExcelModalProps> = ({ isOpen, onClose
             </div>
           </div>
 
+          {error && (
+            <div className="bg-red-50 text-red-700 p-3 rounded-md text-sm flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 shrink-0" />
+              {error}
+            </div>
+          )}
+
           {/* Botones de acción */}
           <div className="flex items-center justify-center gap-3 pt-4">
             <button 
               type="submit"
-              className="flex items-center gap-2 px-5 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 transition-colors"
+              disabled={loading}
+              className="flex items-center gap-2 px-5 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 transition-colors"
             >
-              <Download className="w-4 h-4" />
-              Descargar Excel
+              {loading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <Download className="w-4 h-4" />}
+              {loading ? 'Generando...' : 'Descargar Excel'}
             </button>
             <button 
               type="button" 

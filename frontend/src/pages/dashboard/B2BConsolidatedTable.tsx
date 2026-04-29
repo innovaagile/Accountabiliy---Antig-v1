@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { apiFetch } from '../../api/config';
 import { Check, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
 import { InfoPopover } from '../../components/ui/InfoPopover';
 
 interface B2BMetric {
@@ -63,8 +63,8 @@ export const B2BConsolidatedTable = ({ filters }: { filters?: any }) => {
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
+      <div className="w-full overflow-x-auto pb-4">
+        <table className="w-full text-left border-collapse min-w-[800px]">
           <thead>
             <tr className="bg-gray-50/50">
               <th className="px-6 py-4 font-bold text-gray-400 uppercase tracking-wider text-xs">Ejecutivo</th>
@@ -84,7 +84,7 @@ export const B2BConsolidatedTable = ({ filters }: { filters?: any }) => {
               <th className="px-6 py-4 font-bold text-gray-400 uppercase tracking-wider text-xs text-right">
                 <div className="flex items-center justify-end gap-2">
                   Estado
-                  <InfoPopover content="Clasificación automática del rendimiento basada en su porcentaje de Consistencia (Incumplimiento, Intermedio, Cumpliendo)." position="bottom" />
+                  <InfoPopover content="Clasificación automática del rendimiento basada en su porcentaje de Consistencia (Incumplimiento, Intermedio, Cumpliendo)." position="bottom" align="end" />
                 </div>
               </th>
             </tr>
@@ -265,8 +265,8 @@ const DrillDownPanel = ({ userId }: { userId: string }) => {
         </div>
       </div>
 
-      <div className="h-72 w-full bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-        <ResponsiveContainer width="100%" height="100%">
+      <div className="w-full bg-white rounded-2xl p-4 shadow-sm border border-gray-100 mt-4">
+        <ResponsiveContainer width="100%" height={300}>
           <BarChart data={chartData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 13, fontWeight: 'bold' }} />
             <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 12 }} domain={[0, 100]} />
@@ -278,6 +278,7 @@ const DrillDownPanel = ({ userId }: { userId: string }) => {
             {isGrouped ? (
               <>
                 <Bar dataKey="usuario" name="Usuario" radius={[4, 4, 0, 0]} barSize={40}>
+                  <LabelList dataKey="usuario" position="top" formatter={(val: number) => `${val}%`} fill="#1B254B" fontSize={11} fontWeight="bold" />
                   {chartData.map((entry, index) => {
                     let color = '#EF4444';
                     if (entry.usuario >= 80) color = '#A9D42C';
@@ -285,10 +286,13 @@ const DrillDownPanel = ({ userId }: { userId: string }) => {
                     return <Cell key={`cell-user-${index}`} fill={color} />;
                   })}
                 </Bar>
-                <Bar dataKey="benchmark" name="Promedio del Cargo" fill="#E5E7EB" radius={[4, 4, 0, 0]} barSize={40} />
+                <Bar dataKey="benchmark" name="Promedio del Cargo" fill="#E5E7EB" radius={[4, 4, 0, 0]} barSize={40}>
+                  <LabelList dataKey="benchmark" position="top" formatter={(val: number) => `${val}%`} fill="#9CA3AF" fontSize={11} fontWeight="bold" />
+                </Bar>
               </>
             ) : (
               <Bar dataKey="consistencia" name="consistencia" radius={[8, 8, 0, 0]} barSize={80}>
+                <LabelList dataKey="consistencia" position="top" formatter={(val: number) => `${val}%`} fill="#1B254B" fontSize={12} fontWeight="bold" />
                 {chartData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.fill} />
                 ))}

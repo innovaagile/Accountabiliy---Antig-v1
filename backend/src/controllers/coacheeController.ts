@@ -140,22 +140,21 @@ export const createCoachee = async (req: Request, res: Response): Promise<void> 
     console.log("1. Usuario guardado en BD:", newCoachee.id);
 
     const planNormalizado = (servicio || '').toLowerCase().trim();
-    let totalDias = 28;
-    let diasCalendario = 28;
+    let totalDias = 20;
 
     if (planNormalizado.includes('executive')) {
       totalDias = 40;
-      diasCalendario = 56;
     } else if (planNormalizado.includes('4s')) {
-      totalDias = 28;
-      diasCalendario = 28;
+      totalDias = 20;
+    } else if (planNormalizado.includes('gold')) {
+      totalDias = 59;
     }
 
     const fechaInicio = new Date();
-    const fechaFin = new Date();
-    fechaFin.setDate(fechaInicio.getDate() + diasCalendario);
+    // Restamos 1 para que el día de inicio se cuente como el día 1 del ciclo
+    const fechaFin = calcularFechaFinHabil(fechaInicio, totalDias - 1);
 
-    console.log(`2. Intentando crear ciclo de ${diasCalendario} días...`);
+    console.log(`2. Intentando crear ciclo de ${totalDias} días hábiles...`);
     try {
       await prisma.ciclo.create({
         data: {
@@ -231,7 +230,7 @@ export const actualizarCoachee = async (req: Request, res: Response): Promise<vo
       if (planNormalizado.includes('executive')) {
         nuevoTotalDias = 40;
       } else if (planNormalizado.includes('4s')) {
-        nuevoTotalDias = 28;
+        nuevoTotalDias = 20;
       } else if (planNormalizado.includes('gold')) {
         nuevoTotalDias = 59;
       }
@@ -338,7 +337,7 @@ export const crearCicloInteligente = async (req: Request, res: Response): Promis
       return;
     }
 
-    const fechaFin = body.fechaFin ? new Date(body.fechaFin) : calcularFechaFinHabil(fechaInicioObj, diasHabiles);
+    const fechaFin = body.fechaFin ? new Date(body.fechaFin) : calcularFechaFinHabil(fechaInicioObj, diasHabiles - 1);
     
     await prisma.ciclo.updateMany({
         where: { userId: id },
@@ -452,7 +451,7 @@ export const continuarCiclo = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    const fechaFin = calcularFechaFinHabil(fechaInicioObj, diasHabiles);
+    const fechaFin = calcularFechaFinHabil(fechaInicioObj, diasHabiles - 1);
     const countCiclos = await prisma.ciclo.count({ where: { userId: id } });
     const nombreCiclo = body.nombre ? body.nombre.replace(' (Continuación)', '') : `Ciclo ${countCiclos + 1}`;
 

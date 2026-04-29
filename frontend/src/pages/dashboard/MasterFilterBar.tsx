@@ -31,10 +31,10 @@ export const MasterFilterBar: React.FC<FilterProps> = ({ filters, setFilters, av
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-50 p-4 md:p-6 mb-8 flex flex-wrap gap-4 items-center">
+    <div className="bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-50 p-4 md:p-6 mb-8 flex flex-col md:flex-row md:flex-wrap gap-4 md:items-center">
       
       {/* Buscador */}
-      <div className="flex-1 min-w-[200px]">
+      <div className="w-full md:flex-1 md:min-w-[200px]">
         <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Buscar</label>
         <div className="relative">
           <Search className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -49,7 +49,7 @@ export const MasterFilterBar: React.FC<FilterProps> = ({ filters, setFilters, av
       </div>
 
       {/* Empresas */}
-      <div className="flex-1 min-w-[180px]">
+      <div className="w-full md:flex-1 md:min-w-[180px]">
         <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Empresa</label>
         <div className="relative">
           <Building className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -65,7 +65,7 @@ export const MasterFilterBar: React.FC<FilterProps> = ({ filters, setFilters, av
       </div>
 
       {/* Cargos */}
-      <div className="flex-1 min-w-[180px]">
+      <div className="w-full md:flex-1 md:min-w-[180px]">
         <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Cargo</label>
         <div className="relative">
           <Briefcase className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -81,10 +81,10 @@ export const MasterFilterBar: React.FC<FilterProps> = ({ filters, setFilters, av
       </div>
 
       {/* Rango de Fechas */}
-      <div className="flex-1 min-w-[320px]">
+      <div className="w-full md:flex-1 md:min-w-[320px]">
         <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Periodo</label>
-        <div className="flex gap-3">
-          <div className="relative flex-1 min-w-[140px]">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative w-full sm:flex-1 sm:min-w-[140px]">
             <Calendar className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input 
               type="date"
@@ -93,7 +93,7 @@ export const MasterFilterBar: React.FC<FilterProps> = ({ filters, setFilters, av
               className="w-full pl-9 pr-2 py-2.5 bg-gray-50 border border-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#A9D42C]/20 focus:border-[#A9D42C] transition-all text-sm font-medium text-[#1B254B]"
             />
           </div>
-          <div className="relative flex-1 min-w-[140px]">
+          <div className="relative w-full sm:flex-1 sm:min-w-[140px]">
             <Calendar className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input 
               type="date"

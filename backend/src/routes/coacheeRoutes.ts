@@ -2,6 +2,10 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { obtenerCoachees, obtenerCoacheePorId, createCoachee, actualizarCoachee, eliminarCoachee, resetearPassword, enviarContrato, crearCicloInteligente, eliminarCiclo, actualizarCiclo, continuarCiclo, toggleEstadoCoachee, obtenerMisAvances, usarComodin } from '../controllers/coacheeController';
 import { protect, AuthRequest } from '../middlewares/authMiddleware';
 import { crearTarea, actualizarTarea, eliminarTarea, registrarCumplimiento } from '../controllers/tareaController';
+import multer from 'multer';
+import { descargarPlantillaImportacion, importarMasivo, exportarTransaccional } from '../controllers/importExportController';
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 const router = Router();
 
@@ -22,6 +26,10 @@ const ensureAdminOrSelf = (req: AuthRequest, res: Response, next: NextFunction):
   }
   res.status(403).json({ error: 'Prohibido' });
 };
+
+router.get('/export/template', protect, ensureAdmin, descargarPlantillaImportacion);
+router.post('/import/masivo', protect, ensureAdmin, upload.single('file'), importarMasivo);
+router.get('/export/transaccional', protect, ensureAdmin, exportarTransaccional);
 
 router.get('/', protect, ensureAdmin, obtenerCoachees);
 router.get('/:id', protect, ensureAdminOrSelf, obtenerCoacheePorId);
