@@ -5,6 +5,7 @@ import { enviarCorreoReseteo, enviarCorreoContrato } from '../utils/emailService
 import { enviarCorreoBienvenida } from '../services/emailService';
 import { calcularFechaFinHabil, calcularDiaHabilActual } from '../utils/dateUtils';
 import { calcularNivel } from '../services/gamificationService';
+import { normalizeService } from '../utils/serviceNormalizer';
 
 export const obtenerCoachees = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -206,6 +207,8 @@ export const actualizarCoachee = async (req: Request, res: Response): Promise<vo
     const { nombre, apellido, email, pais, telefono, cargo, activo, servicioContratado, frecuenciaRecordatorios, hasDiagnostico } = req.body;
     const emailLower = email.toLowerCase();
     
+    const servicioNormalizado = servicioContratado ? normalizeService(servicioContratado) : undefined;
+    
     const coacheeActualizado = await prisma.user.update({
       where: { id },
       data: {
@@ -217,28 +220,39 @@ export const actualizarCoachee = async (req: Request, res: Response): Promise<vo
         companyId: req.body.companyId || undefined,
         cargo,
         activo,
-        servicioContratado,
+        servicioContratado: servicioNormalizado,
         frecuenciaRecordatorios,
         hasDiagnostico
       }
     });
     
-    if (servicioContratado) {
-      const planNormalizado = servicioContratado.toLowerCase().trim();
+    if (servicioNormalizado) {
+      const planNormalizadoStr = servicioNormalizado.toLowerCase().trim();
       let nuevoTotalDias = 28;
 
-      if (planNormalizado.includes('executive')) {
+      if (planNormalizadoStr.includes('executive')) {
         nuevoTotalDias = 40;
-      } else if (planNormalizado.includes('4s')) {
+      } else if (planNormalizadoStr.includes('4s')) {
         nuevoTotalDias = 20;
-      } else if (planNormalizado.includes('gold')) {
+      } else if (planNormalizadoStr.includes('gold')) {
         nuevoTotalDias = 59;
       }
 
-      await prisma.ciclo.updateMany({
-        where: { userId: id, estado: 'ACTIVO' },
-        data: { totalDias: nuevoTotalDias }
+      const cicloActivo = await prisma.ciclo.findFirst({
+        where: { userId: id, estado: 'ACTIVO' }
       });
+
+      if (cicloActivo) {
+        const nuevaFechaFin = calcularFechaFinHabil(cicloActivo.fechaInicio, nuevoTotalDias - 1);
+        await prisma.ciclo.update({
+          where: { id: cicloActivo.id },
+          data: { 
+            totalDias: nuevoTotalDias,
+            producto: servicioNormalizado,
+            fechaFin: nuevaFechaFin
+          }
+        });
+      }
     }
     
     res.json(coacheeActualizado);

@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   UserPlus, UploadCloud, FileSpreadsheet, BarChart2, MessageSquare,
-  Search, Eye, ListTodo, RefreshCw, Info, UserMinus, Briefcase, Clock, Smartphone
+  Search, Eye, ListTodo, RefreshCw, Info, UserMinus, UserCheck, Briefcase, Clock, Smartphone
 } from 'lucide-react';
 import CrearCoacheeModal from '../../components/coachees/CrearCoacheeModal';
 import CargaMasivaModal from '../../components/coachees/CargaMasivaModal';
@@ -53,6 +53,32 @@ const AdminDashboard = () => {
 
   const handleAgregarCoachee = (nuevoCoachee: any) => {
     setCoachees([...coachees, nuevoCoachee]);
+  };
+
+  const handleToggleEstado = async (id: string, currentStatus: string) => {
+    const newStatusStr = currentStatus === 'Activo' ? 'Inactivo' : 'Activo';
+    
+    // Optimistic UI
+    setCoachees(prev => prev.map(c => {
+      if (c.id === id) {
+        return { ...c, estado: newStatusStr };
+      }
+      return c;
+    }));
+
+    try {
+      const res = await apiFetch(`/coachees/${id}/toggle-estado`, {
+        method: 'PATCH',
+      });
+      if (!res.ok) {
+        // Revert
+        setCoachees(prev => prev.map(c => c.id === id ? { ...c, estado: currentStatus } : c));
+      }
+    } catch (error) {
+      console.error('Error toggling estado:', error);
+      // Revert
+      setCoachees(prev => prev.map(c => c.id === id ? { ...c, estado: currentStatus } : c));
+    }
   };
 
   return (
@@ -135,7 +161,11 @@ const AdminDashboard = () => {
                 <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${coachee.estado === 'Activo' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>{coachee.estado}</span>
                 <Link to={`/dashboard/view/${coachee.id}`} className="flex items-center gap-1 text-sm text-gray-600 hover:text-blue-600 transition-colors"><Eye className="w-4 h-4" /> Ver Página</Link>
                 <Link to={`/dashboard/coachee/${coachee.id}`} className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 transition-colors"><Info className="w-4 h-4" /> Info</Link>
-                <button className="flex items-center gap-1 text-sm text-red-500 hover:text-red-700 transition-colors"><UserMinus className="w-4 h-4" /> Desact.</button>
+                {coachee.estado === 'Activo' ? (
+                  <button onClick={() => handleToggleEstado(coachee.id, coachee.estado)} className="flex items-center gap-1 text-sm text-red-500 hover:text-red-700 transition-colors"><UserMinus className="w-4 h-4" /> Desact.</button>
+                ) : (
+                  <button onClick={() => handleToggleEstado(coachee.id, coachee.estado)} className="flex items-center gap-1 text-sm text-green-600 hover:text-green-800 transition-colors"><UserCheck className="w-4 h-4" /> Activar</button>
+                )}
               </div>
             </div>
           ))}

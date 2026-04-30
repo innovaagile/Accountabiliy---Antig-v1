@@ -452,7 +452,19 @@ const DetalleCoachee = () => {
         </div>
     );
 
-    const planContratado = coachee.servicioContratado || "Sin Plan";
+    const formatearServicio = (val: string) => {
+        const map: Record<string, string> = {
+            "SPRINT_4S": "Sprint Digital 4S",
+            "EXECUTIVE_MASTERY": "Executive Mastery",
+            "AUDIT_TOOLKIT": "Audit Toolkit",
+            "ENTERPRISE_EXECUTION": "Enterprise Execution",
+            "LIDERAZGO_AGIL": "Liderazgo Ágil",
+            "OTRO_SERVICIO": "Otro Servicio",
+        };
+        return map[val] || val;
+    };
+
+    const planContratado = formatearServicio(coachee.servicioContratado || "Sin Plan");
 
     return (
         /* LAYOUT PRINCIPAL: UNA SOLA COLUMNA */
@@ -525,7 +537,7 @@ const DetalleCoachee = () => {
                         <InfoField label="Teléfono de Contacto" value={coachee.telefono || ''} />
                         <InfoField label="Empresa" value={coachee.empresa || ''} />
                         <InfoField label="Cargo Actual" value={coachee.cargo || ''} />
-                        <InfoField label="Servicio Contratado" value={coachee.servicioContratado || 'Sin Plan'} />
+                        <InfoField label="Servicio Contratado" value={planContratado} />
                         <InfoField label="Frecuencia Recordatorios" value={coachee?.frecuenciaRecordatorios || 'No especificada'} />
                         <InfoField label="Diagnóstico Inicial" value={coachee.hasDiagnostico ? 'REALIZADO' : 'PENDIENTE'} />
                     </div>
@@ -547,13 +559,25 @@ const DetalleCoachee = () => {
                                 <select 
                                     name="servicioContratado"
                                     className="w-full px-4 py-3 rounded-xl bg-[#F4F7FE] focus:ring-2 focus:ring-[#A9D42C] outline-none text-sm font-bold text-[#1B254B]"
-                                    value={editData.servicioContratado}
+                                    value={
+                                        (() => {
+                                            const v = (editData.servicioContratado || '').toUpperCase().replace(/\s+/g, '_');
+                                            if (v.includes('4S')) return 'SPRINT_4S';
+                                            if (v.includes('EXECUTIVE')) return 'EXECUTIVE_MASTERY';
+                                            if (v.includes('AUDIT')) return 'AUDIT_TOOLKIT';
+                                            if (v.includes('ENTERPRISE')) return 'ENTERPRISE_EXECUTION';
+                                            if (v.includes('LIDERAZGO')) return 'LIDERAZGO_AGIL';
+                                            return 'OTRO_SERVICIO';
+                                        })()
+                                    }
                                     onChange={(e) => setEditData({...editData, servicioContratado: e.target.value})}
                                 >
-                                    <option value="Audit Toolkit">Audit Toolkit</option>
-                                    <option value="Sprint Digital 4S">Sprint Digital 4S</option>
-                                    <option value="Executive Mastery">Executive Mastery</option>
-                                    <option value="Enterprise Execution">Enterprise Execution</option>
+                                    <option value="AUDIT_TOOLKIT">Audit Toolkit</option>
+                                    <option value="SPRINT_4S">Sprint Digital 4S</option>
+                                    <option value="EXECUTIVE_MASTERY">Executive Mastery</option>
+                                    <option value="ENTERPRISE_EXECUTION">Enterprise Execution</option>
+                                    <option value="LIDERAZGO_AGIL">Liderazgo Ágil</option>
+                                    <option value="OTRO_SERVICIO">Otro Servicio</option>
                                 </select>
                             </div>
                             <div>
