@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   UserPlus, UploadCloud, FileSpreadsheet, BarChart2, MessageSquare,
-  Search, Eye, ListTodo, RefreshCw, Info, UserMinus, UserCheck, Briefcase, Clock, Smartphone
+  Search, Eye, ListTodo, RefreshCw, Info, UserMinus, UserCheck, Briefcase, Clock, Smartphone, Trash2
 } from 'lucide-react';
 import CrearCoacheeModal from '../../components/coachees/CrearCoacheeModal';
 import CargaMasivaModal from '../../components/coachees/CargaMasivaModal';
@@ -14,6 +14,7 @@ const AdminDashboard = () => {
   const [isCargaMasivaOpen, setIsCargaMasivaOpen] = useState(false);
   const [isExportarOpen, setIsExportarOpen] = useState(false);
   const [coachees, setCoachees] = useState<any[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const [search, setSearch] = useState('');
   const [empresa, setEmpresa] = useState('');
@@ -81,6 +82,48 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleSelectAll = () => {
+    if (selectedIds.length === coachees.length && coachees.length > 0) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(coachees.map(c => c.id));
+    }
+  };
+
+  const handleSelect = (id: string) => {
+    if (selectedIds.includes(id)) {
+      setSelectedIds(prev => prev.filter(selectedId => selectedId !== id));
+    } else {
+      setSelectedIds(prev => [...prev, id]);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    
+    const confirm = window.confirm(`¿Estás seguro de que deseas eliminar permanentemente a ${selectedIds.length} coachees?`);
+    if (!confirm) return;
+
+    try {
+      const res = await apiFetch('/coachees/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedIds })
+      });
+
+      if (res.ok) {
+        setCoachees(prev => prev.filter(c => !selectedIds.includes(c.id)));
+        setSelectedIds([]);
+        alert('Coachees eliminados correctamente');
+      } else {
+        alert('Hubo un error al eliminar los coachees');
+      }
+    } catch (error) {
+      console.error('Error en bulk delete:', error);
+      alert('Error de conexión al eliminar masivamente');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -105,6 +148,11 @@ const AdminDashboard = () => {
         <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium text-sm transition-colors shadow-sm"><BarChart2 className="w-4 h-4" />Métricas</button>
         <Link to="/dashboard/frases" className="flex items-center gap-2 bg-teal-800 hover:bg-teal-900 text-white px-4 py-2 rounded-md font-medium text-sm transition-colors shadow-sm"><MessageSquare className="w-4 h-4" />Gestionar Frases</Link>
         <Link to="/diagnostico" className="flex items-center gap-2 bg-[#1B254B] hover:bg-[#0F1633] text-white px-4 py-2 rounded-md font-medium text-sm transition-colors shadow-sm"><Eye className="w-4 h-4" />Vista Previa M.E.S. (Modo QA)</Link>
+        {selectedIds.length > 0 && (
+          <button onClick={handleBulkDelete} className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md font-medium text-sm transition-colors shadow-sm ml-auto">
+            <Trash2 className="w-4 h-4" />Eliminar Seleccionados ({selectedIds.length})
+          </button>
+        )}
       </div>
 
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 mt-6">
@@ -144,17 +192,33 @@ const AdminDashboard = () => {
       </div>
 
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden mt-4">
-        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50"><h3 className="text-lg font-semibold text-gray-800">Mis Coachees</h3></div>
+        <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center gap-4">
+          <input 
+            type="checkbox" 
+            className="w-4 h-4 text-teal-600 rounded border-gray-300 focus:ring-teal-500 cursor-pointer"
+            checked={coachees.length > 0 && selectedIds.length === coachees.length}
+            onChange={handleSelectAll}
+          />
+          <h3 className="text-lg font-semibold text-gray-800">Mis Coachees</h3>
+        </div>
         <div className="divide-y divide-gray-200">
           {coachees.map((coachee) => (
-            <div key={coachee.id} className="p-6 flex flex-col xl:flex-row xl:items-center justify-between hover:bg-gray-50 transition-colors">
-              <div className="flex-1 mb-4 xl:mb-0">
+            <div key={coachee.id} className="p-6 flex flex-col xl:flex-row xl:items-center justify-between hover:bg-gray-50 transition-colors gap-4">
+              <div className="flex items-start gap-4 flex-1">
+                <input 
+                  type="checkbox" 
+                  className="w-4 h-4 mt-1 text-teal-600 rounded border-gray-300 focus:ring-teal-500 cursor-pointer"
+                  checked={selectedIds.includes(coachee.id)}
+                  onChange={() => handleSelect(coachee.id)}
+                />
+                <div className="flex-1 mb-4 xl:mb-0">
                 <h4 className="text-md font-bold text-gray-900">{coachee.nombre}</h4>
                 <p className="text-sm text-gray-500">{coachee.email}</p>
                 <p className="text-sm text-gray-500 mb-3 flex items-center gap-1 mt-1"><Smartphone className="w-3.5 h-3.5 text-gray-400" /> {coachee.telefono}</p>
                 <div className="flex flex-wrap gap-2">
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100"><Briefcase className="w-3.5 h-3.5" /> {coachee.plan}</span>
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-orange-50 text-orange-700 border border-orange-100"><Clock className="w-3.5 h-3.5" /> {coachee.frecuencia}</span>
+                </div>
                 </div>
               </div>
               <div className="flex items-center gap-4 flex-wrap justify-end">

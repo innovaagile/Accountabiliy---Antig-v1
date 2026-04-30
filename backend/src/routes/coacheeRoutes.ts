@@ -1,5 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { obtenerCoachees, obtenerCoacheePorId, createCoachee, actualizarCoachee, eliminarCoachee, resetearPassword, enviarContrato, crearCicloInteligente, eliminarCiclo, actualizarCiclo, continuarCiclo, toggleEstadoCoachee, obtenerMisAvances, usarComodin } from '../controllers/coacheeController';
+import { obtenerCoachees, obtenerCoacheePorId, createCoachee, actualizarCoachee, eliminarCoachee, eliminarCoacheesMasivo, resetearPassword, enviarContrato, crearCicloInteligente, eliminarCiclo, actualizarCiclo, continuarCiclo, toggleEstadoCoachee, obtenerMisAvances, usarComodin } from '../controllers/coacheeController';
 import { protect, AuthRequest } from '../middlewares/authMiddleware';
 import { crearTarea, actualizarTarea, eliminarTarea, registrarCumplimiento } from '../controllers/tareaController';
 import multer from 'multer';
@@ -35,6 +35,7 @@ router.get('/', protect, ensureAdmin, obtenerCoachees);
 router.get('/:id', protect, ensureAdminOrSelf, obtenerCoacheePorId);
 router.get('/:id/avances', protect, ensureAdminOrSelf, obtenerMisAvances);
 router.post('/', protect, ensureAdmin, createCoachee);
+router.post('/bulk-delete', protect, ensureAdmin, eliminarCoacheesMasivo);
 router.put('/:id', protect, ensureAdminOrSelf, actualizarCoachee);
 router.patch('/:id/toggle-estado', protect, ensureAdmin, toggleEstadoCoachee);
 router.delete('/:id', protect, ensureAdmin, eliminarCoachee);

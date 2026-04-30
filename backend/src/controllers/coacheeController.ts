@@ -273,6 +273,25 @@ export const eliminarCoachee = async (req: Request, res: Response): Promise<void
   }
 };
 
+export const eliminarCoacheesMasivo = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      res.status(400).json({ message: 'Se requiere un arreglo de IDs válidos' });
+      return;
+    }
+    
+    await prisma.user.deleteMany({
+      where: { id: { in: ids } }
+    });
+    
+    res.json({ message: `${ids.length} coachees eliminados correctamente` });
+  } catch (error) {
+    console.error('Error al eliminar masivamente:', error);
+    res.status(500).json({ message: 'Error interno al eliminar de forma masiva' });
+  }
+};
+
 export const resetearPassword = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
