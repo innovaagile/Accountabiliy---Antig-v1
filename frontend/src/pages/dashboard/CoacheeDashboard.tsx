@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { apiFetch } from '../../api/config';
 import { 
@@ -12,7 +12,11 @@ import { ComodinModal } from '../../components/dashboard/ComodinModal';
 
 const CoacheeDashboard = () => {
   const navigate = useNavigate();
+  const { coacheeId } = useParams();
   const { user } = useAuth();
+  
+  const targetId = coacheeId || user?.id;
+  const isAdminMirror = user?.role === 'ADMIN' && !!coacheeId;
   const [coachee, setCoachee] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showComodinModal, setShowComodinModal] = useState(false);
@@ -24,14 +28,14 @@ const CoacheeDashboard = () => {
   const isFriday = new Date().getDay() === 5;
 
   useEffect(() => {
-    if (user?.id) {
+    if (targetId) {
       fetchCoacheeData();
     }
-  }, [user]);
+  }, [targetId]);
 
   const fetchCoacheeData = async () => {
     try {
-      const res = await apiFetch(`/coachees/${user.id}`);
+      const res = await apiFetch(`/coachees/${targetId}`);
       if (res.ok) {
         const data = await res.json();
         setCoachee(data);
@@ -69,7 +73,7 @@ const CoacheeDashboard = () => {
         return newCoachee;
       });
 
-      await apiFetch(`/coachees/${user?.id}/ciclos/${cicloId}/tareas/${tareaId}`, {
+      await apiFetch(`/coachees/${targetId}/ciclos/${cicloId}/tareas/${tareaId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ completada })
@@ -82,7 +86,7 @@ const CoacheeDashboard = () => {
 
   const handleSaveReflection = async (tareaId: string, cicloId: string, aprendizajeDia: string) => {
     try {
-      await apiFetch(`/coachees/${user?.id}/ciclos/${cicloId}/tareas/${tareaId}`, {
+      await apiFetch(`/coachees/${targetId}/ciclos/${cicloId}/tareas/${tareaId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ aprendizajeDia })
@@ -149,8 +153,9 @@ const CoacheeDashboard = () => {
             return (
               <div key={tarea.id} className="bg-white rounded-2xl p-6 shadow-[0_10px_30px_rgba(112,144,176,0.08)] border border-gray-50 flex gap-4 transition-all hover:shadow-[0_15px_40px_rgba(112,144,176,0.12)]">
                 <button 
+                  disabled={isAdminMirror}
                   onClick={() => handleToggleTask(tarea.id, activeCiclo.id, !isCompleted)}
-                  className={`flex-shrink-0 w-8 h-8 rounded-full border-2 flex items-center justify-center transition-colors mt-1 ${isCompleted ? 'bg-[#A9D42C] border-[#A9D42C]' : 'border-gray-300 hover:border-[#A9D42C]'}`}
+                  className={`flex-shrink-0 w-8 h-8 rounded-full border-2 flex items-center justify-center transition-colors mt-1 ${isCompleted ? 'bg-[#A9D42C] border-[#A9D42C]' : 'border-gray-300 hover:border-[#A9D42C]'} ${isAdminMirror ? 'pointer-events-none opacity-80' : ''}`}
                 >
                   {isCompleted && <Check className="w-5 h-5 text-white" />}
                 </button>
@@ -189,10 +194,11 @@ const CoacheeDashboard = () => {
                   <div className="mt-4 pt-4 border-t border-gray-50">
                     <input 
                       type="text" 
+                      disabled={isAdminMirror}
                       placeholder="Anota tus aprendizajes del día aquí..." 
                       defaultValue={cumplimiento.aprendizajeDia || ''}
                       onBlur={(e) => handleSaveReflection(tarea.id, activeCiclo.id, e.target.value)}
-                      className="w-full text-sm text-gray-600 outline-none border-b border-gray-200 focus:border-[#A9D42C] py-2 bg-transparent transition-colors placeholder-gray-300"
+                      className={`w-full text-sm text-gray-600 outline-none border-b border-gray-200 focus:border-[#A9D42C] py-2 bg-transparent transition-colors placeholder-gray-300 ${isAdminMirror ? 'opacity-70 cursor-not-allowed' : ''}`}
                     />
                   </div>
                 </div>
@@ -207,9 +213,15 @@ const CoacheeDashboard = () => {
   return (
     <>
       <div className="w-full animate-in fade-in duration-500">
+        {isAdminMirror && (
+          <div className="bg-amber-100 text-amber-800 text-sm font-bold p-3 text-center rounded-b-xl shadow-sm mb-4">
+            <AlertTriangle className="w-4 h-4 inline-block mr-2 -mt-1" />
+            Modo Lectura - Vista de Administrador
+          </div>
+        )}
       <div className="mb-10 mt-8">
         <h1 className="text-3xl font-black text-[#1B254B]">
-            Hola, {user?.nombre || 'Coachee'} 👋
+            Hola, {coachee?.nombre || user?.nombre || 'Coachee'} 👋
           </h1>
           <p className="text-gray-500 mt-2 text-lg">
             Este es tu Panel Estratégico. Mantén la consistencia y registra tu progreso.
@@ -275,12 +287,12 @@ const CoacheeDashboard = () => {
                   return (
                     <button
                       key={i}
-                      disabled={isWeekend || isUsed}
+                      disabled={isWeekend || isUsed || isAdminMirror}
                       onClick={handleUseWildcard}
                       className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${
                         isUsed 
                           ? 'bg-[#A9D42C] text-[#1B254B] opacity-100' 
-                          : isWeekend
+                          : isWeekend || isAdminMirror
                             ? 'bg-white/10 text-white/30 cursor-not-allowed'
                             : 'bg-white/10 text-white hover:bg-white/20'
                       }`}

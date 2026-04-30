@@ -34,15 +34,16 @@ const startServer = async () => {
   try {
     await prisma.$connect();
     console.log('✅ Base de datos conectada exitosamente.');
+    
+    app.listen(port, () => {
+      console.log(`✅ Server is running on port ${port}`);
+    }).on('error', (err) => {
+      console.error('❌ Error en el servidor Express:', err);
+    });
   } catch (error) {
     console.error('❌ Error al conectar a la base de datos:', error);
+    process.exit(1);
   }
-
-  app.listen(port, () => {
-    console.log(`✅ Server is running on port ${port}`);
-  }).on('error', (err) => {
-    console.error('❌ Error en el servidor Express:', err);
-  });
 };
 
 startServer();
