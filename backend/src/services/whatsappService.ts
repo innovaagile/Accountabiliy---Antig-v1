@@ -18,7 +18,16 @@ export const sendTemplateMessage = async (to: string, templateName: string) => {
       name: templateName,
       language: {
         code: 'es_CL' // Idioma español Chile, según aprobación de Meta
-      }
+      },
+      components: [
+        {
+          type: 'body',
+          parameters: [
+            { type: 'text', text: 'Cristián' },
+            { type: 'text', text: 'Revisión de plataforma' }
+          ]
+        }
+      ]
     }
   };
 
