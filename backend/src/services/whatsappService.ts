@@ -17,7 +17,7 @@ export const sendTemplateMessage = async (to: string, templateName: string) => {
     template: {
       name: templateName,
       language: {
-        code: 'es' // Asume que la plantilla está en español
+        code: 'es_CL' // Idioma español Chile, según aprobación de Meta
       }
     }
   };
