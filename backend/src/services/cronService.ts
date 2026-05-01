@@ -73,6 +73,8 @@ export const startCronJobs = () => {
       const targetMinute = parts.find(p => p.type === 'minute')?.value;
       const targetTimeStr = `${targetHour}:${targetMinute}`;
 
+      console.log(`[CRON] Ejecutando revisión de tareas a las ${targetTimeStr}...`);
+
       // 2. Buscar tareas programadas para esa hora exacta
       const tareas = await prisma.tarea.findMany({
         where: {
@@ -85,9 +87,7 @@ export const startCronJobs = () => {
               telefono: { not: null },
               frecuenciaRecordatorios: {
                 notIn: ['Una vez al día']
-                // Dependiendo del valor exacto en BD, excluimos la opción agrupada y los nulls por fallback
-              },
-              // Aseguramos excluir null explícitamente si se asume fallback "Una vez al día"
+              }
             }
           }
         },
@@ -97,6 +97,8 @@ export const startCronJobs = () => {
           }
         }
       });
+
+      console.log(`[CRON] Tareas encontradas: ${tareas.length}`);
 
       // Filtramos en memoria los usuarios con frecuencia null ya que no los podíamos excluir del todo arriba fácilmente con notIn si prisma no lo toma bien
       const tareasValidas = tareas.filter(t => t.ciclo.user.frecuenciaRecordatorios !== null);
