@@ -46,7 +46,6 @@ export const startCronJobs = () => {
       console.error('❌ Error en la ejecución del CRON:', error);
     }
   }, {
-    scheduled: true,
     timezone: 'America/Santiago'
   });
 
