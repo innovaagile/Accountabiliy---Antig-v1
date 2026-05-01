@@ -3,9 +3,9 @@ import prisma from '../config/db';
 import { sendTemplateMessage } from './whatsappService';
 
 export const startCronJobs = () => {
-  // Ejecutar todos los días a las 09:00 AM (hora de Chile)
-  cron.schedule('0 9 * * *', async () => {
-    console.log('⏳ Ejecutando CRON de Resumen Diario (09:00 AM Chile)...');
+  // Ejecutar temporalmente a las 19:19 (hora de Chile) para prueba de fuego
+  cron.schedule('19 19 * * *', async () => {
+    console.log('⏳ Ejecutando CRON de Resumen Diario (Prueba 19:19 Chile)...');
     
     try {
       const coachees = await prisma.user.findMany({
