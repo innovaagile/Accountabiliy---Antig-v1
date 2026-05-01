@@ -1,5 +1,9 @@
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+let BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+if (BASE_URL && !BASE_URL.endsWith('/api')) {
+  BASE_URL = `${BASE_URL.replace(/\/$/, '')}/api`;
+}
+
 
 export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
   const token = localStorage.getItem('token');
