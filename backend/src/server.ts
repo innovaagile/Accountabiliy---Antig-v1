@@ -9,6 +9,7 @@ import iaRoutes from './routes/iaRoutes';
 import contratoRoutes from './routes/contratoRoutes';
 import adminRoutes from './routes/adminRoutes';
 import webhookRoutes from './routes/webhookRoutes';
+import { startCronJobs } from './services/cronService';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -39,6 +40,9 @@ const startServer = async () => {
   try {
     await prisma.$connect();
     console.log('✅ Base de datos conectada exitosamente.');
+    
+    // Iniciar tareas programadas
+    startCronJobs();
     
     app.listen(port, () => {
       console.log(`✅ Server is running on port ${port}`);

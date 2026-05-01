@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-export const sendTemplateMessage = async (to: string, templateName: string) => {
+export const sendTemplateMessage = async (to: string, templateName: string, components: any[] = []) => {
   const token = process.env.WA_TOKEN;
   const phoneNumberId = process.env.WA_PHONE_NUMBER_ID;
 
@@ -19,15 +19,7 @@ export const sendTemplateMessage = async (to: string, templateName: string) => {
       language: {
         code: 'es_CL' // Idioma español Chile, según aprobación de Meta
       },
-      components: [
-        {
-          type: 'body',
-          parameters: [
-            { type: 'text', text: 'Cristián' },
-            { type: 'text', text: 'Revisión de plataforma' }
-          ]
-        }
-      ]
+      components: components
     }
   };
 

@@ -38,7 +38,16 @@ export const testSendWhatsApp = async (req: Request, res: Response): Promise<voi
     return;
   }
   try {
-    const result = await sendTemplateMessage(to, templateName);
+    const components = [
+      {
+        type: 'body',
+        parameters: [
+          { type: 'text', text: 'Cristián' },
+          { type: 'text', text: 'Revisión de plataforma' }
+        ]
+      }
+    ];
+    const result = await sendTemplateMessage(to, templateName, components);
     res.status(200).json({ success: true, result });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
