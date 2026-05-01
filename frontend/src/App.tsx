@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
+import { apiFetch } from './api/config';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
@@ -25,6 +27,43 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   if (!isAuthenticated) return <Navigate to="/login" />;
   if (user?.role !== 'ADMIN') return <Navigate to="/dashboard" />;
   return <>{children}</>;
+};
+
+const WhatsAppTestButton = () => {
+  const [loading, setLoading] = useState(false);
+
+  const testSend = async () => {
+    const phone = prompt('Ingresa el número de destino (con código de país ej: 56912345678):');
+    if (!phone) return;
+    
+    setLoading(true);
+    try {
+      const res = await apiFetch('/webhooks/whatsapp/test', {
+        method: 'POST',
+        body: JSON.stringify({ to: phone, templateName: 'recordatorio_tarea' })
+      });
+      if (res.ok) {
+        toast.success('Mensaje enviado exitosamente');
+      } else {
+        const errorData = await res.json();
+        toast.error('Error: ' + (errorData.error || 'Fallo desconocido'));
+      }
+    } catch (e: any) {
+      toast.error('Error de red: ' + e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <button 
+      onClick={testSend}
+      disabled={loading}
+      style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 9999, padding: '12px 24px', background: '#25D366', color: 'white', borderRadius: '50px', cursor: 'pointer', border: 'none', boxShadow: '0 4px 12px rgba(37,211,102,0.4)', fontWeight: 'bold' }}
+    >
+      {loading ? 'Enviando...' : '📱 Probar Envío'}
+    </button>
+  );
 };
 
 function App() {
@@ -86,6 +125,7 @@ function App() {
           <Route path="*" element={<Navigate to="/login" />} />
         </Routes>
       </Router>
+      <WhatsAppTestButton />
     </AuthProvider>
   );
 }

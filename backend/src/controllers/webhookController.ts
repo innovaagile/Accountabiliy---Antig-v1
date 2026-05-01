@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import { sendTemplateMessage } from '../services/whatsappService';
+
 
 export const verifyWhatsAppWebhook = (req: Request, res: Response): void => {
   const mode = req.query['hub.mode'];
@@ -26,5 +28,19 @@ export const receiveWhatsAppMessage = (req: Request, res: Response): void => {
     res.status(200).send('EVENT_RECEIVED');
   } else {
     res.sendStatus(404);
+  }
+};
+
+export const testSendWhatsApp = async (req: Request, res: Response): Promise<void> => {
+  const { to, templateName } = req.body;
+  if (!to || !templateName) {
+    res.status(400).json({ error: 'Faltan los parámetros "to" y "templateName".' });
+    return;
+  }
+  try {
+    const result = await sendTemplateMessage(to, templateName);
+    res.status(200).json({ success: true, result });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
   }
 };
