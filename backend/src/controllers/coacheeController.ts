@@ -7,6 +7,26 @@ import { calcularFechaFinHabil, calcularDiaHabilActual } from '../utils/dateUtil
 import { calcularNivel } from '../services/gamificationService';
 import { normalizeService } from '../utils/serviceNormalizer';
 
+export const formatPhoneNumber = (phone: string | undefined | null): string | undefined => {
+  if (!phone) return undefined;
+  
+  // 1. Eliminar símbolos y espacios
+  let cleaned = phone.replace(/[\+\-\s]/g, '');
+  
+  // 2. Si tiene 8 dígitos (ej: 12345678), agregar 569
+  if (cleaned.length === 8) {
+    return `569${cleaned}`;
+  }
+  
+  // 3. Si tiene 9 dígitos y empieza con 9 (ej: 912345678), agregar 56
+  if (cleaned.length === 9 && cleaned.startsWith('9')) {
+    return `56${cleaned}`;
+  }
+  
+  // 4. Si ya tiene 11 dígitos y empieza con 569, se devuelve tal cual (y en cualquier otro caso también)
+  return cleaned;
+};
+
 export const obtenerCoachees = async (req: Request, res: Response): Promise<void> => {
   try {
     const { search, empresa, cargo, servicio, estado } = req.query;
@@ -131,7 +151,7 @@ export const createCoachee = async (req: Request, res: Response): Promise<void> 
         nombre, apellido, email: emailLower,
         passwordHash: passwordHash,
         role: 'COACHEE',
-        pais, telefono: `+56 ${telefono}`,
+        pais, telefono: formatPhoneNumber(telefono) || undefined,
         companyId: req.body.companyId || null, cargo,
         servicioContratado: servicio,
         frecuenciaRecordatorios: frecuencia,
@@ -216,7 +236,7 @@ export const actualizarCoachee = async (req: Request, res: Response): Promise<vo
         apellido,
         email: emailLower,
         pais,
-        telefono,
+        telefono: formatPhoneNumber(telefono),
         companyId: req.body.companyId || undefined,
         cargo,
         activo,
