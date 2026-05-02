@@ -3,21 +3,14 @@ import prisma from '../config/db';
 import { sendTemplateMessage } from './whatsappService';
 
 export const startCronJobs = () => {
-  // Ejecutar temporalmente a las 19:32 (hora de Chile) para prueba de fuego
-  cron.schedule('32 19 * * *', async () => {
-    console.log('⏳ Ejecutando CRON de Resumen Diario (Prueba 19:32 Chile)...');
+  // Ejecutar todos los días a las 09:00 AM (hora de Chile)
+  cron.schedule('0 9 * * *', async () => {
+    console.log('⏳ Ejecutando CRON de Resumen Diario (09:00 AM Chile)...');
     
     try {
-      // Para la prueba, busquemos a TODOS los usuarios con teléfono para no fallar por filtros
-      const todosConTelefono = await prisma.user.findMany({
-        where: { telefono: { not: null }, activo: true }
-      });
-      console.log(`🔎 Total de usuarios activos con teléfono en BD: ${todosConTelefono.length}`);
-
       const coachees = await prisma.user.findMany({
         where: {
-          // Temporalmente comentado el rol para que los ADMIN también puedan probar
-          // role: 'COACHEE',
+          role: 'COACHEE',
           activo: true,
           telefono: { not: null },
           OR: [
