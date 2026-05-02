@@ -28,14 +28,9 @@ export const isRestDay = (date: Date, phone?: string | null): boolean => {
     const hd = new Holidays(countryCode);
     const holidays = hd.isHoliday(date);
     
-    if (holidays && holidays.length > 0) {
-        const isPublicHoliday = holidays.some(h => h.type === 'public');
-        if (isPublicHoliday) {
-            return true;
-        }
-    }
+    if (!holidays) return false;
     
-    return false;
+    return (holidays as any[]).some((h: any) => h.type === 'public');
 };
 
 export const calcularFechaFinHabil = (fechaInicio: Date, diasHabiles: number, phone?: string | null): Date => {
