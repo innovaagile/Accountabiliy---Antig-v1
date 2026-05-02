@@ -1076,18 +1076,35 @@ const DetalleCoachee = () => {
                                 </div>
                                 <div>
                                     <label className="text-[12px] font-black text-gray-400 uppercase tracking-widest mb-2 block">Hora Sugerida</label>
-                                    <select 
-                                        className="w-full px-5 py-4 rounded-xl border-none bg-[#F4F7FE] focus:ring-2 focus:ring-[#A9D42C] outline-none text-sm font-bold text-[#1B254B] appearance-none cursor-pointer"
-                                        value={tareaModalState.data.horaProgramada || '09:00'}
-                                        onChange={e => setTareaModalState(s => ({...s, data: {...s.data, horaProgramada: e.target.value}}))}
-                                    >
-                                        {Array.from({length: 24 * 4}).map((_, i) => {
-                                            const hr = Math.floor(i / 4).toString().padStart(2, '0');
-                                            const min = ((i % 4) * 15).toString().padStart(2, '0');
-                                            const val = `${hr}:${min}`;
-                                            return <option key={val} value={val}>{val}</option>;
-                                        })}
-                                    </select>
+                                    <div className="flex gap-2">
+                                        <select 
+                                            className="w-full px-5 py-4 rounded-xl border-none bg-[#F4F7FE] focus:ring-2 focus:ring-[#A9D42C] outline-none text-sm font-bold text-[#1B254B] appearance-none cursor-pointer"
+                                            value={(tareaModalState.data.horaProgramada || '09:00').split(':')[0]}
+                                            onChange={e => {
+                                                const currentMin = (tareaModalState.data.horaProgramada || '09:00').split(':')[1] || '00';
+                                                setTareaModalState(s => ({...s, data: {...s.data, horaProgramada: `${e.target.value}:${currentMin}`}}));
+                                            }}
+                                        >
+                                            {Array.from({length: 24}).map((_, i) => {
+                                                const hr = i.toString().padStart(2, '0');
+                                                return <option key={hr} value={hr}>{hr}</option>;
+                                            })}
+                                        </select>
+                                        <span className="self-center font-bold text-gray-400">:</span>
+                                        <select 
+                                            className="w-full px-5 py-4 rounded-xl border-none bg-[#F4F7FE] focus:ring-2 focus:ring-[#A9D42C] outline-none text-sm font-bold text-[#1B254B] appearance-none cursor-pointer"
+                                            value={(tareaModalState.data.horaProgramada || '09:00').split(':')[1]}
+                                            onChange={e => {
+                                                const currentHr = (tareaModalState.data.horaProgramada || '09:00').split(':')[0] || '09';
+                                                setTareaModalState(s => ({...s, data: {...s.data, horaProgramada: `${currentHr}:${e.target.value}`}}));
+                                            }}
+                                        >
+                                            {Array.from({length: 12}).map((_, i) => {
+                                                const min = (i * 5).toString().padStart(2, '0');
+                                                return <option key={min} value={min}>{min}</option>;
+                                            })}
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
 
