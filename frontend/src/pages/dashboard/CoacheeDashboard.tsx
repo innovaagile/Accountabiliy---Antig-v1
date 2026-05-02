@@ -24,8 +24,8 @@ const CoacheeDashboard = () => {
 
   // Normalizar hoy para comparar cumplimientos
   const hoyStr = new Date().toISOString().split('T')[0];
-  const isWeekend = new Date().getDay() === 0 || new Date().getDay() === 6;
   const isFriday = new Date().getDay() === 5;
+  const isWeekend = coachee?.esDiaDescanso || false;
 
   useEffect(() => {
     if (targetId) {

@@ -1,5 +1,6 @@
 import prisma from '../config/db';
 import { calcularNivel } from './gamificationService';
+import { isRestDay } from '../utils/dateUtils';
 
 const diasSemanas = ['DOM', 'LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB'];
 
@@ -11,7 +12,7 @@ const obtenerMedallasDefinidas = () => [
     { id: "5", nombre: "Leyenda", descripcion: "Terminaste el ciclo con el 100% de compromiso y sin usar comodines.", icono: "Trophy", colorBase: "bg-yellow-50", colorIcono: "text-yellow-500" }
 ];
 
-export const generarHeatmap = async (cicloId: string, fechaInicio: Date, fechaFin: Date) => {
+export const generarHeatmap = async (cicloId: string, fechaInicio: Date, fechaFin: Date, telefono?: string | null) => {
     const tareas = await prisma.tarea.findMany({
         where: { cicloId },
         include: { cumplimientos: true }
@@ -28,8 +29,8 @@ export const generarHeatmap = async (cicloId: string, fechaInicio: Date, fechaFi
     // Para no iterar infinitamente, limitamos a la fecha de fin o 100 días
     let i = 0;
     while (baseDate <= fechaFin && i < 100) {
-        // Ignorar fines de semana para simplificar si es plan 4S, pero si queremos ser exactos:
-        if (baseDate.getDay() !== 0 && baseDate.getDay() !== 6) {
+        // Ignorar fines de semana y feriados
+        if (!isRestDay(baseDate, telefono)) {
             const dateStr = baseDate.toISOString().split('T')[0];
             const isToday = baseDate.getTime() === today.getTime();
             const isPast = baseDate < today;
@@ -101,7 +102,7 @@ export const generarHeatmap = async (cicloId: string, fechaInicio: Date, fechaFi
     return { heatmapDays, porcentajeCompromiso };
 };
 
-export const calcularAnalisisTareas = async (cicloId: string, fechaInicio: Date, fechaFin: Date) => {
+export const calcularAnalisisTareas = async (cicloId: string, fechaInicio: Date, fechaFin: Date, telefono?: string | null) => {
     const tareasBD = await prisma.tarea.findMany({
         where: { cicloId },
         include: { cumplimientos: true }
@@ -112,7 +113,7 @@ export const calcularAnalisisTareas = async (cicloId: string, fechaInicio: Date,
 
     const today = new Date();
     today.setHours(0,0,0,0);
-    const isWeekend = today.getDay() === 0 || today.getDay() === 6;
+    const isWeekend = isRestDay(today, telefono);
     const isFriday = today.getDay() === 5;
 
     const analisis = tareas.map(t => {
@@ -126,7 +127,7 @@ export const calcularAnalisisTareas = async (cicloId: string, fechaInicio: Date,
         let endD = new Date(fechaFin);
         endD.setHours(0,0,0,0);
         while(pDate <= endD) {
-            const isWknd = pDate.getDay() === 0 || pDate.getDay() === 6;
+            const isWknd = isRestDay(pDate, telefono);
             const isFri = pDate.getDay() === 5;
             if (!isWknd) {
                 if (t.periodicidad === 'DIARIA') cicloTotalProyectado++;
@@ -142,7 +143,7 @@ export const calcularAnalisisTareas = async (cicloId: string, fechaInicio: Date,
 
         while (d <= today) {
             let appliesToThisDay = false;
-            const isWknd = d.getDay() === 0 || d.getDay() === 6;
+            const isWknd = isRestDay(d, telefono);
             const isFri = d.getDay() === 5;
             
             if (!isWknd) {
@@ -314,15 +315,15 @@ export const obtenerDashboardBff = async (userId: string) => {
         hoy.setHours(0,0,0,0);
         
         while (currentDate <= hoy) {
-            if (currentDate.getDay() !== 0 && currentDate.getDay() !== 6) {
+            if (!isRestDay(currentDate, user.telefono)) {
                 diasHabiles++;
             }
             currentDate.setDate(currentDate.getDate() + 1);
         }
         (activeCiclo as any).diaHabilActual = diasHabiles;
 
-        heatmapInfo = await generarHeatmap(activeCiclo.id, activeCiclo.fechaInicio, activeCiclo.fechaFin);
-        analisisTareas = await calcularAnalisisTareas(activeCiclo.id, activeCiclo.fechaInicio, activeCiclo.fechaFin);
+        heatmapInfo = await generarHeatmap(activeCiclo.id, activeCiclo.fechaInicio, activeCiclo.fechaFin, user.telefono);
+        analisisTareas = await calcularAnalisisTareas(activeCiclo.id, activeCiclo.fechaInicio, activeCiclo.fechaFin, user.telefono);
         sabidurias = await extraerSabidurias(activeCiclo.id);
     }
 

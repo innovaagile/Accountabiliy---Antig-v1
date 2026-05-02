@@ -1,6 +1,7 @@
 import cron from 'node-cron';
 import prisma from '../config/db';
 import { sendTemplateMessage } from './whatsappService';
+import { isRestDay } from '../utils/dateUtils';
 
 export const startCronJobs = () => {
   // Ejecutar todos los días a las 09:00 AM (hora de Chile)
@@ -24,6 +25,10 @@ export const startCronJobs = () => {
 
       for (const coachee of coachees) {
         if (!coachee.telefono) continue;
+        if (isRestDay(new Date(), coachee.telefono)) {
+          console.log(`🌴 Saltando resumen diario de ${coachee.nombre} por ser día de descanso o feriado.`);
+          continue;
+        }
 
         try {
           // Ajusta los componentes según lo que requiera la plantilla resumen_diario
@@ -103,6 +108,10 @@ export const startCronJobs = () => {
       for (const tarea of tareasValidas) {
         const user = tarea.ciclo.user;
         if (!user.telefono) continue;
+        if (isRestDay(new Date(), user.telefono)) {
+          console.log(`🌴 Saltando recordatorio de tarea para ${user.nombre} por ser día de descanso o feriado.`);
+          continue;
+        }
 
         try {
           const components = [

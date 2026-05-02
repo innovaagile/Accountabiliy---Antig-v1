@@ -114,7 +114,7 @@ export const obtenerCoacheePorId = async (req: Request, res: Response): Promise<
     if (coachee.ciclos && coachee.ciclos.length > 0) {
       coachee.ciclos = coachee.ciclos.map(ciclo => {
         if (ciclo.activo) {
-          (ciclo as any).diaHabilActual = calcularDiaHabilActual(ciclo.fechaInicio, new Date());
+          (ciclo as any).diaHabilActual = calcularDiaHabilActual(ciclo.fechaInicio, new Date(), coachee.telefono);
         }
         return ciclo;
       });
@@ -122,9 +122,11 @@ export const obtenerCoacheePorId = async (req: Request, res: Response): Promise<
     
     // Inyectar detalle de nivel de gamificación
     const nivelDetalle = calcularNivel(coachee.xpTotal || 0);
+    const { isRestDay } = require('../utils/dateUtils');
     const coacheeResponse = {
       ...coachee,
-      nivelDetalle
+      nivelDetalle,
+      esDiaDescanso: isRestDay(new Date(), coachee.telefono)
     };
     
     res.json(coacheeResponse);
