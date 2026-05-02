@@ -15,8 +15,12 @@ export const getCountryCodeFromPhone = (phone?: string | null): string => {
 
 export const isRestDay = (date: Date, phone?: string | null): boolean => {
     // --- TEMPORARY MOCK PARA PRUEBA DE FERIADO EN PRODUCCIÓN ---
-    // Forzamos que retorne true para simular un feriado legal.
-    return true;
+    // Forzamos que retorne true SOLO si la fecha a evaluar es HOY.
+    const hoyStr = new Date().toISOString().split('T')[0];
+    const dateStr = date.toISOString().split('T')[0];
+    if (dateStr === hoyStr) {
+        return true;
+    }
     // -----------------------------------------------------------
 
     const dayOfWeek = date.getDay();
